@@ -29,7 +29,7 @@ h4,
 h5,
 h6 {
 	font-weight: 200;
-	letter-spacing: 0.4px;
+	letter-spacing: 0.5px;
 	font-family: "Raleway", Sans-serif;
 	color: #232323;
 }
@@ -41,6 +41,16 @@ p {
 	line-height: 28px;
 	letter-spacing: 0.2px;
 	color: #252525;
+}
+
+ul,
+ol {
+    font-size: 1.1em;    
+}
+
+.category {
+    font-size: 1.6em;
+    font-weight: 400;    
 }
 
 a:hover, a:focus, a:active, a.active {
