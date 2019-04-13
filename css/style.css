@@ -239,7 +239,7 @@ figure.portofolio {
     float:left;
     min-width: 20%;
     max-width: 100%;
-    margin: 15px;
+    margin: 0 15px 15px 15px;
     cursor:default;
     background: #FFFFFF;
 }
