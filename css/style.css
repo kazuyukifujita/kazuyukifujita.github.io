@@ -251,8 +251,13 @@ figure.portofolio {
 	font-size: 37px;
 }
 
+.text-left-clear {
+  text-align: center;
+  clear: left;
+}
+
 /*--------------------
-4.2. Skills
+4.2. publications
 --------------------*/
 
 .skills-text h2 {
