@@ -75,6 +75,40 @@ section {
 	padding: 35px 0 60px;
 }
 
+/* web icons */
+.icd {
+    padding: 0 0 0 24px;
+    background-image: url(../images/icons/icd.ico);
+    background-repeat: no-repeat;
+    background-position: 0 2px;
+    background-size: auto 16px;    
+}
+
+.scholar {
+    padding: 0 0 0 24px;
+    background-image: url(../images/icons/scholar.ico);
+    background-repeat: no-repeat;
+    background-position: 0 2px;
+    background-size: auto 16px;    
+}
+
+.researchmap {
+    padding: 0 0 0 24px;
+    background-image: url(../images/icons/researchmap.ico);
+    background-repeat: no-repeat;
+    background-position: 0 2px;
+    background-size: auto 16px;    
+}
+
+.twitter {
+    padding: 0 0 0 24px;
+    background-image: url(../images/icons/twitter.ico);
+    background-repeat: no-repeat;
+    background-position: 0 2px;
+    background-size: auto 16px;    
+}
+
+
 /*--------------------
 1.1 Reset bootstrap
 --------------------*/
