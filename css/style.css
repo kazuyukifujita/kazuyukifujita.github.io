@@ -60,6 +60,10 @@ a, a:hover, a:focus, a:active, a.active {
     outline: 0;
 }
 
+em {
+		font-weight: 600;
+}
+
 ::selection {
     text-shadow: none;
     background: #fed136;
@@ -81,7 +85,7 @@ section {
     background-image: url(../images/icons/icd.ico);
     background-repeat: no-repeat;
     background-position: 0 2px;
-    background-size: auto 16px;    
+    background-size: auto 16px;
 }
 
 .scholar {
@@ -89,7 +93,7 @@ section {
     background-image: url(../images/icons/scholar.ico);
     background-repeat: no-repeat;
     background-position: 0 2px;
-    background-size: auto 16px;    
+    background-size: auto 16px;
 }
 
 .researchmap {
@@ -97,7 +101,7 @@ section {
     background-image: url(../images/icons/researchmap.ico);
     background-repeat: no-repeat;
     background-position: 0 2px;
-    background-size: auto 16px;    
+    background-size: auto 16px;
 }
 
 .twitter {
@@ -105,7 +109,7 @@ section {
     background-image: url(../images/icons/twitter.ico);
     background-repeat: no-repeat;
     background-position: 0 2px;
-    background-size: auto 16px;    
+    background-size: auto 16px;
 }
 
 
