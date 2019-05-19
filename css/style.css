@@ -542,6 +542,10 @@ color: #565656;
     margin: auto;
 }
 
+/* fujita name underline */
+.fujita {
+	text-decoration: underline;
+}
 
 /*--------------------
 4.7. Contacts
