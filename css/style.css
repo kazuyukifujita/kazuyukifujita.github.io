@@ -279,8 +279,8 @@ font-weight: 700;
 
 figure.portofolio {
     float:left;
-    min-width: 25%;
-    max-width: 100%;
+    min-width: 15%;
+    max-width: 30%;
     margin: 0 15px 15px 15px;
     cursor:default;
     background: #FFFFFF;
@@ -357,7 +357,6 @@ figure {
 	position: relative;
     overflow: hidden;
     margin: 0 1px 1px 0;
-    background: #726FB9;
     text-align: center;
     cursor: pointer;
 }
@@ -510,15 +509,18 @@ figure.effect-bubba:hover p {
 --------------------*/
 
 .team-item {
-    text-align: center;
+    text-align: left;
     background-color: #F5F5F5;
-    margin: 5px 0 30px 0;
+		min-height: 230px;
+		height: auto;
+		padding: 15px;
+		margin: 15px;
 }
 
 .team-item h3 {
 font-size: 25px;
     font-weight: 500;
-    margin: 30px 0 20px;
+    margin: 10px 10px 20px;
     /*text-transform: uppercase;*/
 }
 
@@ -533,14 +535,23 @@ color: #565656;
 	font-size: 14px;
 	font-weight: 500;
 	color: #848484;
-	padding: 18px 30px 35px 30px;
+	padding: 18px 0 35px 30;
 	line-height: 24px;
 }
 
 .team-item img {
-    max-height: 280px;
     margin: auto;
 }
+
+.team-item figure {
+    float:left;
+		width: 25%;
+		max-height: 200px;
+    margin: 0 20px 20px 0px;
+    cursor:default;
+}
+
+
 
 /* fujita name underline */
 .fujita {
