@@ -279,11 +279,15 @@ font-weight: 700;
 
 figure.portofolio {
     float:left;
-    min-width: 15%;
-    max-width: 30%;
-    margin: 0 15px 15px 15px;
+		width: 25%;
+    margin: 0 15px 15px 0;
     cursor:default;
     background: #FFFFFF;
+}
+
+.portofolio img{
+		max-width: 100%;
+		height: auto;
 }
 
 .ot-circle {
