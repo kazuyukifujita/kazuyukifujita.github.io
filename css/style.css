@@ -302,6 +302,12 @@ figure.portofolio {
   clear: left;
 }
 
+h3.about{
+	text-align: left;
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
 /*--------------------
 4.2. publications
 --------------------*/
@@ -352,6 +358,8 @@ figure.portofolio {
     border-radius: 10px;
     border: 1px solid #B91919;
 }
+
+
 
 /*--------------------
 4.3. Research
@@ -512,6 +520,7 @@ figure.effect-bubba:hover p {
 --------------------*/
 
 .team-item {
+		overflow: hidden;
     text-align: left;
     background-color: #F5F5F5;
 		min-height: 230px;
@@ -523,7 +532,7 @@ figure.effect-bubba:hover p {
 .team-item h3 {
 font-size: 25px;
     font-weight: 500;
-    margin: 10px 10px 20px;
+    margin: 0 10px 10px 0;
     /*text-transform: uppercase;*/
 }
 
@@ -543,15 +552,18 @@ color: #565656;
 }
 
 .team-item img {
-    margin: auto;
+	margin: auto;
 }
 
-.team-item figure {
-    float:left;
-		width: 25%;
-		max-height: 200px;
-    margin: 0 20px 20px 0px;
-    cursor:default;
+
+.column1{
+	margin: 0 3% 0 0;
+	float:left;
+	width:25%;
+}
+.column2{
+	float: right;
+	width:72%;
 }
 
 
