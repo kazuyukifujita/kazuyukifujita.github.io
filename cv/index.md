@@ -1,6 +1,7 @@
 
 # Kazuyuki Fujita
 PhD in Information Science and Technology
+Last updated: Apr 20th, 2022.
 
 <div id="webaddress">
 Email: <a href="mailto:k-fujita@riec.tohoku.ac.jp">k-fujita@riec.tohoku.ac.jp</a>
@@ -15,28 +16,31 @@ I am an Assistant Professor of Research Institute of Electrical Communication at
 
 ## Employment
 
-`2018-`
-__Research Institute of Electrical Communication, Tohoku University__ Assistant Professor
-> XXXXXXX
+`Jul 2018-`
+**Research Institute of Electrical Communication, Tohoku University**
+Assistant Professor
 
-`2013-2018`
-__ITOKI COROPORATION__
-> I worked for ITOKI, an office space design company, and was engaged in research and development on future offices for 2013-2018.
+`Apr 2013 - Jun 2018`
+**ITOKI COROPORATION**,
 
-`09-12/2011`
-__University of Canterbury__ Reseach Intern in HITLabNZ
+`Sep - Dec 2011`
+**University of Canterbury**
+Research Internship in HITLabNZ
 
+`Apr 2010 - Mar 2012`
+JSPS Research Fellow DC1
 
 ## Education
 
-`2010-2013`
-__Osaka University__ PhD in Information Science and Technology (supervisors: Haruo Takemura). My thesis was titled _認知的情報提示を用いたヒューマンインタフェースに関する研究 (Reference translation: Research on Human Interface Using Cognitive Information Presentation)_ and is available through the [Osaka University Knowledge Archive](https://ir.library.osaka-u.ac.jp/repo/ouka/all/27483/) (in Japanese).
+`Apr 2010 - Mar 2013`
+__Osaka University__ PhD in Information Science and Technology (supervisor: Prof. Haruo Takemura).
+My thesis was titled _認知的情報提示を用いたヒューマンインタフェースに関する研究 (Reference translation: Research on Human Interface Using Cognitive Information Presentation)_ and is available through the [Osaka University Knowledge Archive](https://ir.library.osaka-u.ac.jp/repo/ouka/all/27483/) (in Japanese).
 
-`2008-2010`
-__Osaka University__ MSc in Information Science and Technology
+`Apr 2008 - Mar 2010`
+MSc in Information Science and Technology, __Osaka University__
 
-`2004-2008`
-__Osaka University__ BSc in Engineering
+`Apr 2004 - Mar 2008`
+BSc in Engineering, __Osaka University__
 
 
 ## Publications
@@ -44,17 +48,17 @@ __Osaka University__ BSc in Engineering
 ### Journal Articles (Domestic / International)
 
 
-1. 鈴永紗也，**藤田和之**，白井僚，伊藤雄一．CoiLED Display: 対象に巻きつけ可能なストライプ状フレキシブルディスプレイ．_日本バーチャルリアリティ学会論文誌_，Vol. 26, No. 4, pp. 230-240, 2021年12月.
-2. 上田将理，**藤田和之**，伊藤雄一．PlanT：植物の成長制御を用いた積算情報可視化ディスプレイ．_ヒューマンインタフェース学会論文誌_，Vol. 23, No. 4, pp. 407-418, 2021年11月.
-3. 川崎祐太，伊藤雄一，**藤田和之**，尾上孝雄．アクティブ音響センシングにおける環境温度変化にロバストな物体情報識別手法の検討．_情報処理学会論文誌_，Vol. 62, No. 10, pp. 1658-1668, 2021年10月.
+1. 鈴永紗也，**藤田和之**，白井僚，伊藤雄一．CoiLED Display: 対象に巻きつけ可能なストライプ状フレキシブルディスプレイ．_日本バーチャルリアリティ学会論文誌_, Vol. 26, No. 4, pp. 230-240, 2021年12月.
+2. 上田将理，**藤田和之**，伊藤雄一．PlanT：植物の成長制御を用いた積算情報可視化ディスプレイ．_ヒューマンインタフェース学会論文誌_, Vol. 23, No. 4, pp. 407-418, 2021年11月.
+3. 川崎祐太，伊藤雄一，**藤田和之**，尾上孝雄．アクティブ音響センシングにおける環境温度変化にロバストな物体情報識別手法の検討．_情報処理学会論文誌_, Vol. 62, No. 10, pp. 1658-1668, 2021年10月.
 4. Chiahuei Tseng, Miao Cheng, Hassan Matout, **Kazuyuki Fujita**, Yoshifumi Kitamura, Satoshi Shioiri, I-Lien Ho, Asaf Bachrach. MA and Togetherness (Ittaikan) in the Narratives of Dancers and Spectators: Sharing an Uncertain Space. _Jpn Psychol Res_. Mar. 2021.
-5. **藤田和之**，黄梦婷，高嶋和毅，土田太一，真鍋宏幸，北村喜文．ShearSheet: 静電容量タッチパネルに装着可能な透明シートを用いた剪断入力インタフェース．_情報処理学会論文誌_，Vol. 62, No.2, pp. 641-653, 2021年2月.
-6. 伊藤雄一，石原好貴，白井僚，**藤田和之**，高嶋和毅，尾上孝雄．StickyTouch: 局所的粘着性を制御可能なタッチディスプレイ．_日本バーチャルリアリティ学会論文誌_，Vol. 25, No. 4, pp. 384-393, 2020年12月. **第23回 論文賞**．
-7. **藤田和之**，高嶋和毅，伊藤雄一，北村喜文．ペン入力環境におけるパン操作にズーム・チルトを連動させる地図ナビゲーション手法に関する調査．_電子情報通信学会論文誌_，Vol. J103-D, No. 11, pp. 817-828, 2020年11月．
-8. 天間遼太郎，高嶋和毅，**藤田和之**，末田航，北村喜文．空間連動する2つのカメラ視点を用いたドローン操縦インタフェースの拡張．_情報処理学会論文誌_，Vol. 61, No. 8, pp. 1319-1332, 2020年8月．
-9. 林大悟，**藤田和之**，高嶋和毅，Robert W. Lindeman，北村喜文．Redirected Jumping: VRにおける跳躍動作時の移動量操作手法．_日本バーチャルリアリティ学会論文誌_，Vol. 24, Nol. 4, pp. 341-350, 2019年12月．**第22回 論文賞**．
-10. 伊藤雄一，**藤田和之**，城所宏行．パランガ：触覚フィードバックを持つ電子パラパラ漫画，_日本バーチャルリアリティ学会論文誌_，Vol. 19, No. 4, pp. 477-486, 2014年12月．
-11. 遠藤隆介，伊藤雄一，中島康祐，**藤田和之**，岸野文郎．マルチタッチディスプレイを用いた複数人によるプランニングができるデジタルサイネージシステムの提案，_情報処理学会論文誌_，Vol. 55, No. 4, 1275-1286, 2014年4月．
+5. **藤田和之**，黄梦婷，高嶋和毅，土田太一，真鍋宏幸，北村喜文．ShearSheet: 静電容量タッチパネルに装着可能な透明シートを用いた剪断入力インタフェース．_情報処理学会論文誌_, Vol. 62, No.2, pp. 641-653, 2021年2月.
+6. 伊藤雄一，石原好貴，白井僚，**藤田和之**，高嶋和毅，尾上孝雄．StickyTouch: 局所的粘着性を制御可能なタッチディスプレイ．_日本バーチャルリアリティ学会論文誌_, Vol. 25, No. 4, pp. 384-393, 2020年12月. **第23回 論文賞**．
+7. **藤田和之**，高嶋和毅，伊藤雄一，北村喜文．ペン入力環境におけるパン操作にズーム・チルトを連動させる地図ナビゲーション手法に関する調査．_電子情報通信学会論文誌_, Vol. J103-D, No. 11, pp. 817-828, 2020年11月．
+8. 天間遼太郎，高嶋和毅，**藤田和之**，末田航，北村喜文．空間連動する2つのカメラ視点を用いたドローン操縦インタフェースの拡張．_情報処理学会論文誌_, Vol. 61, No. 8, pp. 1319-1332, 2020年8月．
+9. 林大悟，**藤田和之**，高嶋和毅，Robert W. Lindeman，北村喜文．Redirected Jumping: VRにおける跳躍動作時の移動量操作手法．_日本バーチャルリアリティ学会論文誌_, Vol. 24, Nol. 4, pp. 341-350, 2019年12月．**第22回 論文賞**．
+10. 伊藤雄一，**藤田和之**，城所宏行．パランガ：触覚フィードバックを持つ電子パラパラ漫画，_日本バーチャルリアリティ学会論文誌_, Vol. 19, No. 4, pp. 477-486, 2014年12月．
+11. 遠藤隆介，伊藤雄一，中島康祐，**藤田和之**，岸野文郎．マルチタッチディスプレイを用いた複数人によるプランニングができるデジタルサイネージシステムの提案，_情報処理学会論文誌_, Vol. 55, No. 4, 1275-1286, 2014年4月．
 12. 中島康祐，伊藤雄一，林勇介，池田和章，**藤田和之**，尾上孝雄．Emoballoon：ソーシャルタッチインタラクションのための柔らかな風船型インタフェース，_日本バーチャルリアリティ学会論文誌_, Vol. 18, No. 3, pp. 255-265, 2013年9月．
 13. **Kazuyuki Fujita**, Yuichi Itoh, and Hiroyuki Kidokoro. “Paranga: An electronic flipbook that reproduces riffling interaction.” _International Journal of Creative Interfaces and Computer Graphics (IJCICG)_, Vol. 4, No. 1, pp. 21-34, Jun.2013.
 14. Yusuke Hayashi, Yuichi Itoh, Kazuki Takashima, **Kazuyuki Fujita**, Kosuke Nakajima, and Takao Onoye. Cup-le: cup-shaped tool for subtly collecting Information during conversational experiment, _In International Journal of Advanced Computer Science (IJCICG)_, Vol. 3, No. 1, pp. 44-50, Jan. 2013.
@@ -217,10 +221,11 @@ __Osaka University__ BSc in Engineering
 16. 第16回 国際学生対抗バーチャルリアリティコンテスト (IVRC2008) 岐阜本戦大会 **審査員特別賞**，**各務原市民賞**．作品名：アソブレラ，2008年11月．
 
 
-## Funding and Scholarship
-1. 科研費 国際B
-2. 科研費 基盤C
-3. 学術振興会 特別研究員 DC1
+## Funding
+1. **藤田和之**，高嶋和毅．作業環境の物理的微小動作による姿勢誘導手法の確立, 日本学術振興会 科学研究費助成事業 基盤研究(C), 21K11974, 4,160千円, 2021年4月-2024年3月．
+2. **藤田和之**，高嶋和毅，北村喜文．適応的な触覚提示によるVR体験の没入感向上と動作範囲の削減, 日本学術振興会 科学研究費助成事業 国際共同研究加速基金(国際共同研究強化(B)), 19KK0258, 18,330千円, 2019年10月-2023年3月．
+3. 高嶋和毅，伊藤雄一，**藤田和之**．自律動作物理デバイス群によるVRユーザの身体支持と高精度インタラクション, 日本学術振興会 科学研究費助成事業 基盤研究(B), 21H03473, 17,420千円, 2021年4月-2024年3月．
+4. 北村喜文，片山統裕，高嶋和毅，**藤田和之**，枦修一郎．磁気式3次元モーションセンサシステムの試作と未踏問題への応用．日本学術振興会 科学研究費助成事業 基盤研究(A), 18H04103
 
 ## Press Coverage
 1. [勝手に動き回って伸縮するパーティション登場　ソーシャルディスタンスとプライバシー確保　東北大学が開発：Innovative Tech - ITmedia NEWS](https://www.itmedia.co.jp/news/articles/2108/13/news099.html), 2021年8月．
