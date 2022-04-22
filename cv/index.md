@@ -16,12 +16,12 @@ I am an Assistant Professor of Research Institute of Electrical Communication at
 
 ## Employment
 
-`Jul 2018-`
+`Jul 2018 -`
 **Research Institute of Electrical Communication, Tohoku University**
 Assistant Professor
 
 `Apr 2013 - Jun 2018`
-**ITOKI COROPORATION**,
+**ITOKI COROPORATION**
 
 `Sep - Dec 2011`
 **University of Canterbury**
@@ -33,8 +33,8 @@ JSPS Research Fellow DC1
 ## Education
 
 `Apr 2010 - Mar 2013`
-__Osaka University__ PhD in Information Science and Technology (supervisor: Prof. Haruo Takemura).
-My thesis was titled _認知的情報提示を用いたヒューマンインタフェースに関する研究 (Reference translation: Research on Human Interface Using Cognitive Information Presentation)_ and is available through the [Osaka University Knowledge Archive](https://ir.library.osaka-u.ac.jp/repo/ouka/all/27483/) (in Japanese).
+PhD in Information Science and Technology, __Osaka University__
+My thesis was titled _認知的情報提示を用いたヒューマンインタフェースに関する研究 (Reference translation: Research on Human Interface Using Cognitive Information Presentation)_ and is available through the [Osaka University Knowledge Archive](https://ir.library.osaka-u.ac.jp/repo/ouka/all/27483/) (supervisor: Prof. Haruo Takemura).
 
 `Apr 2008 - Mar 2010`
 MSc in Information Science and Technology, __Osaka University__
@@ -71,7 +71,7 @@ BSc in Engineering, __Osaka University__
 ### Reviewed International Conference Papers (Full / Short paper)
 1. Kumpei Ogawa, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. PseudoJumpOn: Jumping onto Steps in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 635-643, Mar. 2022.
 2. Yukai Hoshikawa, **Kazuyuki Fujita**, Kazuki Takashima, Morten Fjeld, Yoshifumi Kitamura. RedirectedDoors: Redirection While Opening Doors in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 464-473, Mar. 2022. **Honorable Mention Best Paper Award**.
-3. Yoshiki Kudo, Anthony Tang, **Kazuyuki Fujita**, Isamu Endo, Kazuki Takashima, Yoshifumi Kitamura. Towards Balancing VR Immersion and Bystander Awareness, _Proc. of the ACM on Human-Computer Interaction (ISS '21)_, Vol. 5, Issue ISS, Article No. 484, pp 1–22, Nov. 2021 Best Paper Award.
+3. Yoshiki Kudo, Anthony Tang, **Kazuyuki Fujita**, Isamu Endo, Kazuki Takashima, Yoshifumi Kitamura. Towards Balancing VR Immersion and Bystander Awareness, _Proc. of the ACM on Human-Computer Interaction (ISS '21)_, Vol. 5, Issue ISS, Article No. 484, pp 1–22, Nov. 2021. **Best Paper Award**.
 4. Isamu Endo, Kazuki Takashima, Maakito Inoue, **Kazuyuki Fujita**, Kiyoshi Kiyokawa, and Yoshifumi Kitamura. ModularHMD: A Reconfigurable Mobile Head-Mounted Display Enabling Ad-hoc Peripheral Interactions with the Real World,_ Proc. of the 34th Annual ACM Symposium on User Interface Software and Technology (UIST '21)_, pp. 100-117, Oct. 2021.
 5. **Kazuyuki Fujita**, Aoi Suzuki, Kazuki Takashima, Kaori Ikematsu, Yoshifumi Kitamura. TiltChair: Manipulative Posture Guidance by Actively Inclining the Seat of an Office Chair, _Proc. of the 2021 CHI Conference on Human Factors in Computing Systems (CHI '21)_, Article No. 228, pp. 1-14, May. 2021.
 6. Linfeng Chen, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura. PinpointFly: An Egocentric Position-control Drone Interface using Mobile AR, _Proc. of the 2021 CHI Conference on Human Factors in Computing Systems (CHI '21)_, Article No. 150, pp. 1-13, May. 2021.
@@ -98,7 +98,7 @@ BSc in Engineering, __Osaka University__
 4. Yuki Onishi, Kazuki Takashima, **Kazuyuki Fujita**, and Yoshifumi Kitamura. Self-actuated Stretchable Partitions for Dynamically Creating Secure Workplaces, _Extended Abstracts of the 2021 CHI Conference on Human Factors in Computing Systems (CHI EA '21)_, Article No. 294, pp. 1-6, May. 2021.
 5. Josh (Adi) Tedjasaputra, Briane Paul V. Samson, Masitah Ghazali, Eunice Sari, Sayan Sarcar, Dilrukshi Gamage, **Kazuyuki Fujita**, Pranjal Jain, Amit Jena, Toni-Jan Keith Palma Monserrat, Nabila Sindi, Kaixing Zhao, Jordan Aiko Deja, Manvi Fotedar, Manjiri Joshi, Yang Li, Zhicong Lu, Akihiro Matsufuji, Shio Miyafuji, Korok Sengupta, Diksha Singh, Simran Singh, and Umar Taufiqulhakim. Asian CHI Symposium: HCI Research from Asia and on Asian Contexts and Cultures. _Extended Abstracts of the 2021 CHI Conference on Human Factors in Computing Systems (CHI EA '21)_. Article No. 80, pp. 1–5, May. 2021.
 6. Saya Suzunaga, Yuichi Itoh, **Kazuyuki Fujita**, Ryo Shirai, Takao Onoye. CoiLED Display: Make Everything Displayable, _SIGGRAPH Asia 2020 Emerging Technologies_. pp. 1-2, Dec. 2020.
-7. **Kazuyuki Fujita**, Daigo Hayashi, Kotaro Hara, Kazuki Takashima, Yoshifumi Kitamura. Techniques to Visualize Occluded Graph Elements for 2.5D Map Editing. CHI 2020 Extended Abstract, pp. 1–9, Apr. 2020.
+7. **Kazuyuki Fujita**, Daigo Hayashi, Kotaro Hara, Kazuki Takashima, Yoshifumi Kitamura. Techniques to Visualize Occluded Graph Elements for 2.5D Map Editing. _CHI 2020 Extended Abstract_, pp. 1–9, Apr. 2020.
 8. **Kazuyuki Fujita**. Adaptive Spatial User Interfaces That Activate Us. _The 26th International Display Workshops (IDW '19)_, AIS1/INP2-1 (Invited), pp. 13-15, Nov. 2019.
 9. Tomas Havlik, Daigo Hayashi, **Kazuyuki Fujita**, Kazuki Takashima, Robert W. Lindeman, Yoshifumi Kitamura. JumpinVR: Enhancing Jump Experience in a Limited Physical Space. _SIGGRAPH Asia 2019 XR_, Nov. 2019.
 10. Pascal Chiu, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura. FreeMo: Extending Hand Tracking Experiences Through Capture Volume and User Freedom. _SIGGRAPH Asia 2019 XR_, Nov. 2019.
