@@ -256,7 +256,7 @@ BSc in Engineering, __Osaka University__
 - Asian CHI Symposium 2020 Liaison with IPSJ
 - Asian CHI Symposium 2019 General Chair
 - 日本バーチャルリアリティ学会大会 2018 会場係
--
+
 ### Reviewer
 - CHI 2020-2021
 - UIST 2019-2020
