@@ -275,6 +275,7 @@ BSc in Engineering, __Osaka University__
 ### Others
 - 日本バーチャルリアリティ学会 ニューズレター委員 2021-現在
 - 日本バーチャルリアリティ学会 学会誌委員 2019-2021
+- Interverse Virtual Reality Challenge (IVRC) 実行委員 2022
 
 ## References
 
