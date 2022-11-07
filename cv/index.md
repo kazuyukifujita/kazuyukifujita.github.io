@@ -9,10 +9,9 @@ Email: <a href="mailto:k-fujita@riec.tohoku.ac.jp">k-fujita@riec.tohoku.ac.jp</a
 Web: <i class="fa fa-twitter"></i> <a href="https://kazuyukifujita.github.io/">kazuyukifujita.github.io</a>
 </div>
 
-
 ## Currently
 
-I am an Assistant Professor of Research Institute of Electrical Communication at Tohoku University. My research interest includes **Human-Computer Interaction** and **Virtual Reality**.
+I am an Assistant Professor of Research Institute of Electrical Communication at Tohoku University. My research interest includes **Human-Computer Interaction** and **Virtual Reality**. More specifically, I focus on "workspaces" that surrounds human activities, and research **Human-Workspace Interaction** that support various human activities through interaction with the computerized/virtualized workspaces or its components.
 
 ## Employment
 
@@ -69,6 +68,7 @@ BSc in Engineering, __Osaka University__
 19. **藤田和之**，伊藤雄一，吉田愛，尾崎麻耶，菊川哲也，深澤遼，高嶋和毅，北村喜文，岸野文郎．アソブレラ：振動を記録・再生可能な傘型アンビエントインタフェース，_日本バーチャルリアリティ学会論文誌_, Vol. 15, No. 3, pp. 397-405, 2010年9月．
 
 ### Reviewed International Conference Papers (Full / Short paper)
+1. Yuki Onishi, Kazuki Takashima, Shoi Higashiyama, **Kazuyuki Fujita**, Yoshifumi Kitamura. WaddleWalls: Room-scale Interactive Partitioning System using a Swarm of Robotic Partitions, _Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 29, pp. 1–15, Oct. 2022.
 1. Kumpei Ogawa, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. PseudoJumpOn: Jumping onto Steps in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 635-643, Mar. 2022.
 2. Yukai Hoshikawa, **Kazuyuki Fujita**, Kazuki Takashima, Morten Fjeld, Yoshifumi Kitamura. RedirectedDoors: Redirection While Opening Doors in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 464-473, Mar. 2022. **Honorable Mention Best Paper Award**.
 3. Yoshiki Kudo, Anthony Tang, **Kazuyuki Fujita**, Isamu Endo, Kazuki Takashima, Yoshifumi Kitamura. Towards Balancing VR Immersion and Bystander Awareness, _Proc. of the ACM on Human-Computer Interaction (ISS '21)_, Vol. 5, Issue ISS, Article No. 484, pp 1–22, Nov. 2021. **Best Paper Award**.
@@ -92,6 +92,9 @@ BSc in Engineering, __Osaka University__
 21. **Kazuyuki Fujita**, Yuichi Itoh, Ai Yoshida, Maya Ozaki, Kikukawa Tetsuya, Ryo Fukazawa, Kazuki Takashima, Yoshifumi Kitamura, Fumio Kishino. Funbrella: Recording and Replaying Vibrations through an Umbrella Axis, _Proc. of the International Conference on Advances in Computer Entertainment Technology (ACE '09)_, pp. 66-71, Oct. 2009.
 
 ### Reviewed International Conference Papers（Poster / Demo / Workshop）
+1. Ryota Gomi, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura. ConfusionLens: Dynamic and Interactive Visualization for Performance Analysis of Multiclass Image Classifiers, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 63, pp. 1-3, Oct. 2022.
+1. Keito Uwaseki, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. ConfusionLens: Dynamic and Interactive Visualization for Performance Analysis of Multiclass Image Classifiers, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 60, pp. 1-3, Oct. 2022.
+1. Tatsuya Maeda, Keita Kuwayama, Kodai Ito, **Kazuyuki Fujita**, Yuichi Itoh. FullPull: A Stretchable UI to Input Pulling Strength on Touch Surfaces, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 52, pp. 1-3, Oct. 2022.
 1. Taiyo Natomi, Yasuji Kitabatake, **Kazuyuki Fujita**, Takao Onoye, and Yuichi Itoh, An Infant-Like Device that Reproduces Hugging Sensation with Multi-Channel Haptic Feedback, _Proc. of the 27th ACM Symposium on Virtual Reality Software and Technology (VRST ’21)_, Article No. 55, 3 pages, Nov. 2021.
 2. Tatsuki Takano, Kazuki Takashima, **Kazuyuki Fujita**, Hong Guang, Kaori Ikematsu, and Yoshifumi Kitamura. A Compact and Low-cost VR Tooth Drill Training System using Mobile HMD and Stylus Smartphone, _Proc. of the 27th ACM Symposium on Virtual Reality Software and Technology (VRST ’21)_, Article No. 46, 3 pages, Dec. 2021.
 3. Isamu Endo, Kazuki Takashima, Maakito Inoue, **Kazuyuki Fujita**, Kiyoshi Kiyokawa, and Yoshifumi Kitamura. A Reconfigurable Mobile Head-Mounted Display Supporting Real World Interactions, _Extended Abstracts of the 2021 CHI Conference on Human Factors in Computing Systems (CHI EA '21)_, Article No. 418, pp. 1-7, May. 2021.
