@@ -246,7 +246,7 @@ BSc in Engineering, __Osaka University__
 
 ## Academic Service
 ### Program Committee
-- ISS 2021, 2022
+- ISS 2021-2022
 - VRST 2018, 2019
 
 ### Journal Editorial Board
@@ -254,21 +254,24 @@ BSc in Engineering, __Osaka University__
 - 電子情報通信学会論文誌 ヒューマンコミュニケーション特集号 2019-2022
 
 ### Organizing Committee
-- VRST 2021 Communication Chair, Poster/Demo Chair
+- ヒューマンインタフェースシンポジウム2023 企画係
+- Interverse Virtual Reality Challenge (IVRC) 2022 広報係
+- ACM VRST 2021 Communication Chair, Poster/Demo Chair
 - Asian CHI Symposium 2021 Accessibility Chair
 - Asian CHI Symposium 2020 Liaison with IPSJ
 - Asian CHI Symposium 2019 General Chair
 - 日本バーチャルリアリティ学会大会 2018 会場係
 
 ### Reviewer
-- CHI 2020-2021
-- UIST 2019-2020
+- CHI 2020-2023
+- UIST 2019-2021
 - IEEEVR 2019-2022
 - ISMAR 2021-2022
 - VRST 2018-2021
 - TEI 2022
 - SUI 2018
 - SIGGRAPH Asia 2019-2020
+- IMWUT
 - VRIH 2021
 - ROBOMECH Journal 2019-2020
 - 情報処理学会論文誌 2018-2022
