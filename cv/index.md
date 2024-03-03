@@ -1,7 +1,7 @@
 
 # Kazuyuki Fujita
 PhD in Information Science and Technology
-Last updated: Apr 20th, 2022.
+Last updated: Mar 3rd, 2024.
 
 <div id="webaddress">
 Email: <a href="mailto:k-fujita@riec.tohoku.ac.jp">k-fujita@riec.tohoku.ac.jp</a>
@@ -11,7 +11,7 @@ Web: <i class="fa fa-twitter"></i> <a href="https://kazuyukifujita.github.io/">k
 
 ## Currently
 
-I am an Assistant Professor of Research Institute of Electrical Communication at Tohoku University. My research interest includes **Human-Computer Interaction** and **Virtual Reality**. More specifically, I focus on "workspaces" that surrounds human activities, and research **Human-Workspace Interaction** that support various human activities through interaction with the computerized/virtualized workspaces or its components.
+I am an Assistant Professor of Research Institute of Electrical Communication at Tohoku University, and have been granted the title of Prominent Research Fellow at Tohoku University from 2023. My research interest includes **Human-Computer Interaction** and **Virtual Reality**. More specifically, I focus on "workspaces" that surrounds human activities, and research **Human-Workspace Interaction**, which supports various human activities through interaction with the computerized or virtualized workspaces and their components.
 
 ## Employment
 
@@ -46,8 +46,16 @@ BSc in Engineering, __Osaka University__
 
 ### Journal Articles (Domestic / International)
 
-
-1. 鈴永紗也，**藤田和之**，白井僚，伊藤雄一．CoiLED Display: 対象に巻きつけ可能なストライプ状フレキシブルディスプレイ．_日本バーチャルリアリティ学会論文誌_, Vol. 26, No. 4, pp. 230-240, 2021年12月.
+1. Yukai Hoshikawa, **Kazuyuki Fujita**, Kazuki Takashima, Morten Fjeld, Yoshifumi Kitamura. RedirectedDoors+: Door-Opening Redirection with Dynamic Haptics in Room-Scale VR, _IEEE Transactions on Visualization and Computer Graphics_, to appear.
+1. Ryota Gomi, Kazuki Takashima, Yuki Onishi, **Kazuyuki Fujita**, Yoshifumi Kitamura. UbiSurface: A Robotic Touch Surface for Supporting Mid-air Planar Interactions in Room-Scale VR, _Proc. of the ACM on Human-Computer Interaction_, Vol. 7, Issue ISS, Article no. 443, pp. 376-397, Nov. 2023.
+1. Kento Nishimura, Kodai Ito, Ken Fujiwara, **Kazuyuki Fujita**, Yuichi Itoh. Detection of Nodding of Interlocutors using a Chair-shaped Device and Investigating Relationship between a Divergent Thinking Task and Amount of Nodding, _Quality and User Experience_, Vol. 8, Article no. 10, 12 pages, Oct. 2023.
+1. Kumpei Ogawa, **Kazuyuki Fujita**, Shuichi Sakamoto, Kazuki Takashima, Yoshifumi Kitamura. Exploring Visual-Auditory Redirected Walking using Auditory Cues in Reality, _IEEE Transactions on Visualization and Computer Graphics_, to appear.
+2. **Kazuyuki Fujita**, Kazuki Takashima, Yuichi Itoh, Yoshifumi Kitamura. Human-Workspace Interaction: prior research efforts and future challenges for supporting knowledge workers, _Quality and User Experience_, Vol. 8, Article no. 7, Aug. 2023.
+3. 上堀まい，伊藤弘大，**藤田和之**，伊藤雄一．口腔内への温度提示と食品の温度が食体験と味覚に与える影響．_日本感性工学会論文誌_ ，TJSKE-D-22-00070, 2023年3月.
+4. Takahiro Nagai, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. HandyGaze: A Gaze Tracking Technique for Room-Scale Environments using a Single Smartphone, _Proc. of the ACM on Human-Computer Interaction_, Vol. 6, Issue ISS, Article No. 562, pp 143–160, Nov. 2022.
+5. Taichi Tsuchida, **Kazuyuki Fujita**, Kaori Ikematsu, Sayan Sarcar, Kazuki Takashima, Yoshifumi Kitamura. TetraForce: A Magnetic-Based Interface Enabling Pressure Force and Shear Force Input Applied to Front and Back of a Smartphone, _Proc. of the ACM on Human-Computer Interaction_, Vol. 6, Issue ISS, Article No. 564, pp 185–206, Nov. 2022.
+1. Yoshiki Kudo, Anthony Tang, **Kazuyuki Fujita**, Isamu Endo, Kazuki Takashima, Yoshifumi Kitamura. Towards Balancing VR Immersion and Bystander Awareness, _Proc. of the ACM on Human-Computer Interaction_, Vol. 5, Issue ISS, Article No. 484, pp 1–22, Nov. 2021. **Best Paper Award**.
+2. 鈴永紗也，**藤田和之**，白井僚，伊藤雄一．CoiLED Display: 対象に巻きつけ可能なストライプ状フレキシブルディスプレイ．_日本バーチャルリアリティ学会論文誌_, Vol. 26, No. 4, pp. 230 - 240, 2021年12月.
 2. 上田将理，**藤田和之**，伊藤雄一．PlanT：植物の成長制御を用いた積算情報可視化ディスプレイ．_ヒューマンインタフェース学会論文誌_, Vol. 23, No. 4, pp. 407-418, 2021年11月.
 3. 川崎祐太，伊藤雄一，**藤田和之**，尾上孝雄．アクティブ音響センシングにおける環境温度変化にロバストな物体情報識別手法の検討．_情報処理学会論文誌_, Vol. 62, No. 10, pp. 1658-1668, 2021年10月.
 4. Chiahuei Tseng, Miao Cheng, Hassan Matout, **Kazuyuki Fujita**, Yoshifumi Kitamura, Satoshi Shioiri, I-Lien Ho, Asaf Bachrach. MA and Togetherness (Ittaikan) in the Narratives of Dancers and Spectators: Sharing an Uncertain Space. _Jpn Psychol Res_. Mar. 2021.
@@ -68,6 +76,10 @@ BSc in Engineering, __Osaka University__
 19. **藤田和之**，伊藤雄一，吉田愛，尾崎麻耶，菊川哲也，深澤遼，高嶋和毅，北村喜文，岸野文郎．アソブレラ：振動を記録・再生可能な傘型アンビエントインタフェース，_日本バーチャルリアリティ学会論文誌_, Vol. 15, No. 3, pp. 397-405, 2010年9月．
 
 ### Reviewed International Conference Papers (Full / Short paper)
+1. Taichi Murakami, **Kazuyuki Fujita**, Kotaro Hara, Kazuki Takashima, Yoshifumi Kitamura. SwapVid: Integrating Video Viewing and Document Exploration with Direct Manipulation, _Proc. of the 2024 CHI Conference on Human Factors in Computing Systems (CHI '24)_, to appear.
+2. Ryota Gomi, Ryo Suzuki, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura. InflatableBots: Inflatable Shape-Changing Mobile Robots for Large-Scale Encountered-Type Haptics in VR, _Proc. of the 2024 CHI Conference on Human Factors in Computing Systems (CHI '24)_, to appear.
+3. Pete Andrews, Oda Elise Nordberg, Morten Fjeld, Dr Njål Borch, Frode Guribye, **Kazuyuki Fujita**, Stephanie Zubicueta Portales. AiCommentator: A Multimodal Conversational Agent for Embedded Visualization in Football Viewing, _Proc. ACM Conference on Intelligent User Interfaces (IUI 24)_, to appear.
+4. Maakito Inoue, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura. BirdViewAR: Surroundings-aware Remote Drone Piloting Using an Augmented Third-person Perspective, _Proc. of the 2023 CHI Conference on Human Factors in Computing Systems (CHI '23)_, Article No. 31, pp. 1-19, May. 2023.
 1. Yuki Onishi, Kazuki Takashima, Shoi Higashiyama, **Kazuyuki Fujita**, Yoshifumi Kitamura. WaddleWalls: Room-scale Interactive Partitioning System using a Swarm of Robotic Partitions, _Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 29, pp. 1–15, Oct. 2022.
 1. Kumpei Ogawa, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. PseudoJumpOn: Jumping onto Steps in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 635-643, Mar. 2022.
 2. Yukai Hoshikawa, **Kazuyuki Fujita**, Kazuki Takashima, Morten Fjeld, Yoshifumi Kitamura. RedirectedDoors: Redirection While Opening Doors in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 464-473, Mar. 2022. **Honorable Mention Best Paper Award**.
@@ -92,7 +104,9 @@ BSc in Engineering, __Osaka University__
 21. **Kazuyuki Fujita**, Yuichi Itoh, Ai Yoshida, Maya Ozaki, Kikukawa Tetsuya, Ryo Fukazawa, Kazuki Takashima, Yoshifumi Kitamura, Fumio Kishino. Funbrella: Recording and Replaying Vibrations through an Umbrella Axis, _Proc. of the International Conference on Advances in Computer Entertainment Technology (ACE '09)_, pp. 66-71, Oct. 2009.
 
 ### Reviewed International Conference Papers（Poster / Demo / Workshop）
-1. Ryota Gomi, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura. ConfusionLens: Dynamic and Interactive Visualization for Performance Analysis of Multiclass Image Classifiers, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 63, pp. 1-3, Oct. 2022.
+1. Kumpei Ogawa, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. Demonstration of PseudoJumpOn: Repetitive Step-up Jump in Virtual Reality, _SIGGRAPH Asia 2022 XR_, Article No. 5, 2 pages, Dec. 2022.
+1. Yukai Hoshikawa, **Kazuyuki Fujita**, Kazuki Takashima, Morten Fjeld, Yoshifumi Kitamura. Demonstration of RedirectedDoors: Manipulating User’s Orientation while Opening Doors in Virtual Reality, _SIGGRAPH Asia 2022 XR_, Article No. 6, 2 pages, Dec. 2022.
+1. Ryota Gomi, Kazuki Takashima, **Kazuyuki Fujita**, Yoshifumi Kitamura.  A Triangular Actuating Device Stand that Dynamically Adjusts Mobile Screen’s Position, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 63, pp. 1-3, Oct. 2022.
 1. Keito Uwaseki, **Kazuyuki Fujita**, Kazuki Takashima, Yoshifumi Kitamura. ConfusionLens: Dynamic and Interactive Visualization for Performance Analysis of Multiclass Image Classifiers, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 60, pp. 1-3, Oct. 2022.
 1. Tatsuya Maeda, Keita Kuwayama, Kodai Ito, **Kazuyuki Fujita**, Yuichi Itoh. FullPull: A Stretchable UI to Input Pulling Strength on Touch Surfaces, _Adjunct Proc. of the 35th Annual ACM Symposium on User Interface Software and Technology (UIST '22)_, Article No.: 52, pp. 1-3, Oct. 2022.
 1. Taiyo Natomi, Yasuji Kitabatake, **Kazuyuki Fujita**, Takao Onoye, and Yuichi Itoh, An Infant-Like Device that Reproduces Hugging Sensation with Multi-Channel Haptic Feedback, _Proc. of the 27th ACM Symposium on Virtual Reality Software and Technology (VRST ’21)_, Article No. 55, 3 pages, Nov. 2021.
@@ -127,78 +141,85 @@ BSc in Engineering, __Osaka University__
 30. Ai Yoshida, Yuichi Itoh, **Kazuyuki Fujita**, Maya Ozaki, Kikukawa Tetsuya, Ryo Fukazawa, Yoshifumi Kitamura, Fumio Kishino. Funbrella: Making Rain Fun, _ACM SIGGRAPH 2009 Emerging Technologies_, No. 10, Aug. 2009.
 
 ### Reviewed Domestic Conference Papers
-1. 中川久倫，伊藤弘大，**藤田和之**，岸楓馬，福島力也，伊藤雄一．エクスカキバー：ビジュアル・サウンドエフェクトを用いた筆記支援．_インタラクション2022論文集_，pp. 641-644, 2022年3月．**インタラクティブ発表賞（PC推薦・一般投票）**．
-2. 井熊勇介，伊藤弘大，**藤田和之**，角谷星哉，名富太陽，物永斉，伊藤雄一．床型デバイスを用いた歩容取得による人物の推定．_インタラクション2022論文集_，pp. 684-686, 2022年3月．
-3. 三津谷海度，伊藤弘大，**藤田和之**，岸楓馬，福島力也，伊藤雄一．SenseDesk：重心重量によりユーザの状態推定が可能なデスクの開発．_インタラクション2022論文集_，pp. 687-689, 2022年3月．
-4. 遠藤勇，高嶋和毅，井上理哲人，清川清，**藤田和之**，北村 喜文．周辺とのアドホックなインタラクションを実現する再構成可能なVR HMD．_インタラクション2021論文集_，pp. 271-273, 2021年3月．**インタラクティブ発表賞（PC推薦）**．
-5. 鈴木蒼生，**藤田和之**，高嶋和毅，池松香，北村喜文．TiltChair:座面の前傾により姿勢誘導するオフィスチェア．_インタラクション2020論文集_，pp. 134-139, 2021年3月．
-6. 土田太一，**藤田和之**，中原和洋，山田茂雄，高嶋和毅，北村喜文．バーチャルな影による奥行き錯覚を用いた付箋紙の移動操作と類似度可視化インタフェース．_インタラクション2020論文集_，pp. 848-851, 2020年3月．**プレミアム発表**．
-7. 中原和洋，**藤田和之**，土田太一，高嶋和毅，北村喜文．机上へのプロジェクションによる紙面テキストハイライト手法．_インタラクション2020論文集_，pp. 909-911, 2020年3月．**プレミアム発表**．
-8. 林大悟，**藤田和之**，原航太郎，高嶋和毅，北村喜文．地図グラフデータ内のトポロジー誤り発見・修正のためのインタラクション手法．_インタラクション2020論文集_，pp. 639-641, 2020年3月．
-9. 鄢一先，高嶋和毅，アンソニー タン，**藤田和之**，北村喜文．複数の自走壁型プロップを用いたルームスケールVRの空間インフラの遭遇型触覚提示．_インタラクション2020論文集_，pp. 123-132, 2020年3月．
+
+1. 前田竜矢，伊藤弘大，桑山佳汰，**藤田和之**，伊藤雄一．サーフェスにおける引っ張り入力を実現するインタフェースの検討．_インタラクション2023論文集_ ，pp. 88-96, 2023年3月．
+1. 土田太一，**藤田和之**，池松香，Sayan Sarcar，高嶋和毅，北村喜文．TetraForce: スマートフォンの表裏両面に対する垂直・剪断方向の力を入力可能な磁気式インタフェース．_第30回インタラクティブシステムとソフトウェアに関するワークショップ (WISS '22) 論文集_ ，2022年12月．
+1. 中川久倫，伊藤弘大，**藤田和之**，岸楓馬，福島力也，伊藤雄一．エクスカキバー：ビジュアル・サウンドエフェクトを用いた筆記支援．_インタラクション2022論文集_ ，pp. 641-644, 2022年3月．**インタラクティブ発表賞（PC推薦・一般投票）**．
+9. 鄢一先，高嶋和毅，アンソニー タン，**藤田和之**，北村喜文．複数の自走壁型プロップを用いたルームスケールVRの空間インフラの遭遇型触覚提示．_インタラクション2020論文集_ ，pp. 123-132, 2020年3月．
 10. 上田将理，伊藤雄一，**藤田和之**，尾上孝雄．PlanT：植物を用いた積算情報可視化ディスプレイ．_インタラクション2020論文集_，pp. 21-30, 2020年3月．
-11. 天間遼太郎，高嶋和毅，末田航，**藤田和之**，北村喜文．空間連動する2つのカメラ視点を用いたドローン操縦インタフェースの拡張．_インタラクション2019論文集_，pp. 102-111, 2019年3月．
-12. 工藤義礎，アンソニー タン，**藤田和之**，遠藤勇，高嶋和毅，ソール グリーンバーグ，北村喜文．近接学に基づくHMD利用者・非利用者の間の段階的なアウェアネスの向上．_インタラクション2019論文集_，pp. 48-57, 2019年3月．
-13. Mengting Huang，**藤田和之**，高嶋和毅，真鍋宏幸，北村喜文．タッチスクリーン上に重ねた透明シートを利用した位置と速度制御の併用が可能なユーザインタフェース．_インタラクション2019論文集_，pp. 276-278, 2019年3月．**インタラクティブ発表賞（PC推薦）**．
-14. 中島康祐, 伊藤雄一, 林勇介, 池田和章, **藤田和之**, 尾上孝雄. Emoballoon: ソーシャルタッチインタラクションのための風船型インタフェース. _インタラクション2013論文集_, pp. 95-102, 2013年3月．
-15. 大脇正憲，**藤田和之**，高嶋和毅，築谷喬之，伊藤雄一，北村喜文，岸野文郎．撓みのメタファを用いたビューポート制御インタフェース，_インタラクション2011論文集_, pp. 115-122, 2011年3月．
-16. 城所宏行，**藤田和之**，大脇正憲，Khoa Doba，Christopher Chung，伊藤雄一．パランガ：ページをめくる触感を再現する本型デバイス，_インタラクション2011論文集_, pp. 609-612, 2011年3月．
-17. 中島康祐，伊藤雄一，築谷喬之，**藤田和之**，高嶋和毅，岸野文郎．FuSA2 Touch Display: 大画面毛状マルチタッチディスプレイ，_インタラクション2011論文集_, pp. 547-550, 2011年3月．
-18. **藤田和之**，高嶋和毅，築谷喬之，朝日元生，北村喜文，岸野文郎．複数のカメラ操作を連動させる地図ナビゲーション手法の提案，_インタラクション2009論文集_, pp. 97-104, 2009年3月．
+11. 天間遼太郎，高嶋和毅，末田航，**藤田和之**，北村喜文．空間連動する2つのカメラ視点を用いたドローン操縦インタフェースの拡張．_インタラクション2019論文集_ ，pp. 102-111, 2019年3月．
+12. 工藤義礎，アンソニー タン，**藤田和之**，遠藤勇，高嶋和毅，ソール グリーンバーグ，北村喜文．近接学に基づくHMD利用者・非利用者の間の段階的なアウェアネスの向上．_インタラクション2019論文集_ ，pp. 48-57, 2019年3月．
+13. Mengting Huang，**藤田和之**，高嶋和毅，真鍋宏幸，北村喜文．タッチスクリーン上に重ねた透明シートを利用した位置と速度制御の併用が可能なユーザインタフェース．_インタラクション2019論文集_ ，pp. 276-278, 2019年3月．**インタラクティブ発表賞（PC推薦）**．
+14. 中島康祐, 伊藤雄一, 林勇介, 池田和章, **藤田和之**, 尾上孝雄. Emoballoon: ソーシャルタッチインタラクションのための風船型インタフェース. _インタラクション2013論文集_ , pp. 95-102, 2013年3月．
+15. 大脇正憲，**藤田和之**，高嶋和毅，築谷喬之，伊藤雄一，北村喜文，岸野文郎．撓みのメタファを用いたビューポート制御インタフェース，_インタラクション2011論文集_ , pp. 115-122, 2011年3月．
+18. **藤田和之**，高嶋和毅，築谷喬之，朝日元生，北村喜文，岸野文郎．複数のカメラ操作を連動させる地図ナビゲーション手法の提案，_インタラクション2009論文集_ , pp. 97-104, 2009年3月．
 
 ### Non-reviewed Domestic Conference Papers
-1. 加藤麻奈，伊藤弘大，**藤田和之**，伊藤雄一，植物のメタファを用いたテレワーカーの感性的状態の表現方法の調査，_研究報告ヒューマンコンピュータインタラクション（HCI）_，Vol. 2022-HCI-196, No. 17, pp. 1-8, 2022年1月．**学生奨励賞**．
-2. 星川結海，**藤田和之**，高嶋和毅，北村喜文，VRにおける開扉時の視触覚を用いたリダイレクション手法の提案，_日本バーチャルリアリティ学会第26回大会論文集_, pp. 2B3-7, 2021年9月．
-3. 小川郡平，**藤田和之**，高嶋和毅，北村喜文，VRにおける段差への擬似的な跳び乗り感覚提示手法の提案，_日本バーチャルリアリティ学会第26回大会論文集_, pp. 2D3-3, 2021年9月．
-4. 名富太陽，北畠康司，**藤田和之**，尾上孝雄，伊藤雄一，乳児型デバイスを用いた乳児の抱擁感覚再現手法，_日本バーチャルリアリティ学会第26回大会論文集_, pp. 2B3-1, 2021年9月．
+
+1. 小川郡平，**藤田和之**，高嶋和毅，北村喜文．ハンドリダイレクションを用いた広範囲のキャンバスへのVRドローイング体験．_第31回インタラクティブシステムとソフトウェアに関するワークショップ (WISS '23) 論文集_ ，2023年12月．**対話発表賞（プログラム委員）**．
+1. 橘優希，**藤田和之**，高嶋和毅，北村喜文．スマートフォンのみによる視線トラッキング技術を用いた展示案内アプリケーション．_インタラクション2023論文集_ ，pp. 981-986, 2023年3月．**インタラクティブ発表賞（一般投票）**．
+1. 田中雄大，**藤田和之**，高嶋和毅，北村喜文．デスクワーク中の頭部姿勢に応じた空間音響フィードバック提示手法．_インタラクション2023論文集_ ，pp. 820-824, 2023年3月．
+2. 井熊勇介，伊藤弘大，**藤田和之**，角谷星哉，名富太陽，物永斉，伊藤雄一．床型デバイスを用いた歩容取得による人物の推定．_インタラクション2022論文集_ ，pp. 684-686, 2022年3月．
+3. 三津谷海度，伊藤弘大，**藤田和之**，岸楓馬，福島力也，伊藤雄一．SenseDesk：重心重量によりユーザの状態推定が可能なデスクの開発．_インタラクション2022論文集_ ，pp. 687-689, 2022年3月．
+1. 加藤麻奈，伊藤弘大，**藤田和之**，伊藤雄一，植物のメタファを用いたテレワーカーの感性的状態の表現方法の調査，_研究報告ヒューマンコンピュータインタラクション（HCI）_ ，Vol. 2022-HCI-196, No. 17, pp. 1-8, 2022年1月．**学生奨励賞**．
+2. 星川結海，**藤田和之**，高嶋和毅，北村喜文，VRにおける開扉時の視触覚を用いたリダイレクション手法の提案，_日本バーチャルリアリティ学会第26回大会論文集_ , pp. 2B3-7, 2021年9月．
+3. 小川郡平，**藤田和之**，高嶋和毅，北村喜文，VRにおける段差への擬似的な跳び乗り感覚提示手法の提案，_日本バーチャルリアリティ学会第26回大会論文集_ , pp. 2D3-3, 2021年9月．
+4. 名富太陽，北畠康司，**藤田和之**，尾上孝雄，伊藤雄一，乳児型デバイスを用いた乳児の抱擁感覚再現手法，_日本バーチャルリアリティ学会第26回大会論文集_ , pp. 2B3-1, 2021年9月．
 5. 永井崇大，**藤田和之**，高嶋和毅，北村喜文，スマートフォンのみを用いた周囲環境への視線入力インタフェースの検討，ヒューマンインタフェース学会研究報告集, 2021年6月．
-6. 角谷星哉，**藤田和之**，尾上孝雄，伊藤雄一，ベビーベッド型デバイスを用いた乳児の啼泣認識手法の検討，_ヒューマンインタフェース学会研究報告集_, 2021年6月．
-7. 川崎祐太，伊藤雄一，**藤田和之**，尾上孝雄，アクティブ音響センシングを用いた物体情報識別における環境温度変化に関する一検討，_ヒューマンインタフェース学会研究報告集_, 2020年10月．
-8. 鈴永紗也，伊藤雄一，**藤田和之**，白井僚，尾上孝雄，ストライプ状LED群を用いたフレキシブルディスプレイ，_ヒューマンインタフェース学会研究報告集_, 2020年10月．
-9. 西村賢人，伊藤雄一，藤原健，**藤田和之**，松井裕子，彦野賢，尾上孝雄．SenseChairによる意見発散課題におけるコミュニケーションとうなずきの関係性に関する検討．_信学技報_, Vol. 120, No. 136, HCS2020-32, pp. 65-70, 2020年8月．
-10. 泉健太, 鈴木蒼生, 市川将太郎, 高嶋和毅, **藤田和之**, 北村喜文．ラバーハンド錯覚を利用した身体への映像と触覚の同時提示に関する検討．_ヒューマンインタフェース学会研究報告集_, Vol. 22, pp. 37-42，2020年5月．
-11. 遠藤勇，工藤義礎，高嶋和毅，**藤田和之**，北村喜文．周辺環境への気づきやインタラクションが可能なHMDに関する検討．_日本バーチャルリアリティ学会第24回大会論文集_，pp. 6C-01，2019年9月．
-12. 大西悠貴，高嶋和毅，**藤田和之**，北村喜文．平面ディスプレイの移動による擬似力覚の生成に関する研究．_日本バーチャルリアリティ学会第24回大会論文集_，pp. 1A-07，2019年9月．
-13. 海老晃行，陳林峰，高嶋和毅，**藤田和之**，北村喜文．ドローン操縦時の空間把握のための操縦状況に連携した副ドローンカメラ自動配置手法．_ヒューマンインタフェースシンポジウム2019論文集_，2019年9月．
-14. **藤田和之**．CHIワークショップ開催報告．_情報処理学会研究報告_，Vol. 2019-HCI-184, No. 11, 2019年7月.
-15. 鈴木蒼生，**藤田和之**，高嶋和毅，北村喜文．座面の座り心地を制御可能な椅子に関する一検討．_ヒューマンインタフェース学会研究報告集_，Vol. 21, No. 4, pp. 37-40. 2019年6月．
-16. 鈴永紗也，伊藤雄一，**藤田和之**，尾上孝雄．ガラス管を用いたボリューメトリックディスプレイのための気泡位置制御．_ヒューマンインタフェース学会研究報告集_，Vol. 21, No. 4, pp. 31-36. 2019年6月．
-17. 井上理哲人，天間遼太郎，**藤田和之**，高嶋和毅，北村喜文．ドローンとARを用いて交差点の死角を可視化するユーザインタフェース．_電子情報通信学会総合大会論文集_，pp. ISS-SP-078. 2019年3月．
-18. **藤田和之**，西川政行，小笠原豊，白鳥毅，大橋一広，会議支援のための情報表出空間の構築，_第31回人工知能学会全国大会_，2P1-4，2017年5月．
-19. 津川翔，茂木佑希子，菊地佑介，岸野文郎，**藤田和之**，伊藤雄一，大崎博之，Twitter におけるユーザの活動履歴を利用したうつ傾向の推定に関する一検討，_第33回インターネット技術第 163 委員会研究会_, 2013年5月.
+6. 角谷星哉，**藤田和之**，尾上孝雄，伊藤雄一，ベビーベッド型デバイスを用いた乳児の啼泣認識手法の検討，_ヒューマンインタフェース学会研究報告集_ , 2021年6月．
+4. 遠藤勇，高嶋和毅，井上理哲人，清川清，**藤田和之**，北村 喜文．周辺とのアドホックなインタラクションを実現する再構成可能なVR HMD．_インタラクション2021論文集_ ，pp. 271-273, 2021年3月．**インタラクティブ発表賞（PC推薦）**．
+5. 鈴木蒼生，**藤田和之**，高嶋和毅，池松香，北村喜文．TiltChair:座面の前傾により姿勢誘導するオフィスチェア．_インタラクション2020論文集_ ，pp. 134-139, 2021年3月．
+7. 川崎祐太，伊藤雄一，**藤田和之**，尾上孝雄，アクティブ音響センシングを用いた物体情報識別における環境温度変化に関する一検討，_ヒューマンインタフェース学会研究報告集_ , 2020年10月．
+8. 鈴永紗也，伊藤雄一，**藤田和之**，白井僚，尾上孝雄，ストライプ状LED群を用いたフレキシブルディスプレイ，_ヒューマンインタフェース学会研究報告集_ , 2020年10月．
+9. 西村賢人，伊藤雄一，藤原健，**藤田和之**，松井裕子，彦野賢，尾上孝雄．SenseChairによる意見発散課題におけるコミュニケーションとうなずきの関係性に関する検討．_信学技報_ , Vol. 120, No. 136, HCS2020-32, pp. 65-70, 2020年8月．
+10. 泉健太, 鈴木蒼生, 市川将太郎, 高嶋和毅, **藤田和之**, 北村喜文．ラバーハンド錯覚を利用した身体への映像と触覚の同時提示に関する検討．_ヒューマンインタフェース学会研究報告集_ , Vol. 22, pp. 37-42，2020年5月．
+6. 土田太一，**藤田和之**，中原和洋，山田茂雄，高嶋和毅，北村喜文．バーチャルな影による奥行き錯覚を用いた付箋紙の移動操作と類似度可視化インタフェース．_インタラクション2020論文集_ ，pp. 848-851, 2020年3月．**プレミアム発表**．
+7. 中原和洋，**藤田和之**，土田太一，高嶋和毅，北村喜文．机上へのプロジェクションによる紙面テキストハイライト手法．_インタラクション2020論文集_ ，pp. 909-911, 2020年3月．**プレミアム発表**．
+8. 林大悟，**藤田和之**，原航太郎，高嶋和毅，北村喜文．地図グラフデータ内のトポロジー誤り発見・修正のためのインタラクション手法．_インタラクション2020論文集_ ，pp. 639-641, 2020年3月．
+11. 遠藤勇，工藤義礎，高嶋和毅，**藤田和之**，北村喜文．周辺環境への気づきやインタラクションが可能なHMDに関する検討．_日本バーチャルリアリティ学会第24回大会論文集_ ，pp. 6C-01，2019年9月．
+12. 大西悠貴，高嶋和毅，**藤田和之**，北村喜文．平面ディスプレイの移動による擬似力覚の生成に関する研究．_日本バーチャルリアリティ学会第24回大会論文集_ ，pp. 1A-07，2019年9月．
+13. 海老晃行，陳林峰，高嶋和毅，**藤田和之**，北村喜文．ドローン操縦時の空間把握のための操縦状況に連携した副ドローンカメラ自動配置手法．_ヒューマンインタフェースシンポジウム2019論文集_ ，2019年9月．
+14. **藤田和之**．CHIワークショップ開催報告．_情報処理学会研究報告_ ，Vol. 2019-HCI-184, No. 11, 2019年7月.
+15. 鈴木蒼生，**藤田和之**，高嶋和毅，北村喜文．座面の座り心地を制御可能な椅子に関する一検討．_ヒューマンインタフェース学会研究報告集_ ，Vol. 21, No. 4, pp. 37-40. 2019年6月．
+16. 鈴永紗也，伊藤雄一，**藤田和之**，尾上孝雄．ガラス管を用いたボリューメトリックディスプレイのための気泡位置制御．_ヒューマンインタフェース学会研究報告集_ ，Vol. 21, No. 4, pp. 31-36. 2019年6月．
+17. 井上理哲人，天間遼太郎，**藤田和之**，高嶋和毅，北村喜文．ドローンとARを用いて交差点の死角を可視化するユーザインタフェース．_電子情報通信学会総合大会論文集_ ，pp. ISS-SP-078. 2019年3月．
+18. **藤田和之**，西川政行，小笠原豊，白鳥毅，大橋一広，会議支援のための情報表出空間の構築，_第31回人工知能学会全国大会_ ，2P1-4，2017年5月．
+19. 津川翔，茂木佑希子，菊地佑介，岸野文郎，**藤田和之**，伊藤雄一，大崎博之，Twitter におけるユーザの活動履歴を利用したうつ傾向の推定に関する一検討，_第33回インターネット技術第 163 委員会研究会_ , 2013年5月.
 20. 津川翔，茂木佑希子，菊地佑介，岸野文郎，**藤田和之**，伊藤雄一，大崎博之，Twitter 解析によるうつ傾向推定に関する一検討，_電子情報通信学会総合大会講演論文集 (A-14-6)_, p.187, 2013年3月．
 21. 脇田昌紀，岸野文郎，**藤田和之**，伊藤雄一．SenseChairを用いた同調傾向の計測，電子情報通信学会総合大会講演論文集 (A-14-5), p.186, 2013年3月．
 22. 津川翔，茂木佑希子，菊地佑介，岸野文郎，**藤田和之**，伊藤雄一，大崎博之，大規模ツイートデータを利用したうつ傾向の推定に関する検討，_電子情報通信学会技術研究報告 (HCS2012-89)_, pp.61-66, 2013年2月．
-23. **藤田和之**，伊藤雄一，高嶋和毅，中島康祐，林勇介，岸野文郎．Ambient Party Room: パーティ場面における部屋型会話支援システムの構築，_第91回ヒューマンインタフェース学会研究報告集_，Vol. 14, No. 8, pp. 7-10, 2012年9月．
+23. **藤田和之**，伊藤雄一，高嶋和毅，中島康祐，林勇介，岸野文郎．Ambient Party Room: パーティ場面における部屋型会話支援システムの構築，_第91回ヒューマンインタフェース学会研究報告集_ ，Vol. 14, No. 8, pp. 7-10, 2012年9月．
 24. **藤田和之**，城所宏行，伊藤雄一．アナログパラパラデジタルマンガ，_日本バーチャルリアリティ学会第17回大会 オーガナイズドセッション_, 2012年9月．
-25. 藤井佑一，岸野文郎，**藤田和之**，中島康祐，伊藤雄一，菊地日出男．U-brella: 降り注ぐ情報を可振化するポータブル傘型インタフェース，_日本バーチャルリアリティ学会第17回大会論文集_，pp. 652-655, 2012年9月．
-26. 高嶋和毅，**藤田和之**，横山ひとみ，伊藤雄一，北村喜文．6人会話における非言語情報と場の活性度に関する検討，_電子情報通信学会技術研究報告_，Vol. 112, No. 176 pp. 49-54, 2012年8月．
-27. 遠藤隆介，伊藤雄一，中島康祐，**藤田和之**，岸野文郎．マルチタッチディスプレイを用いたプランニングができるデジタルサイネージシステムの提案，_ヒューマンインタフェース学会研究報告集_, Vol. 14, No. 8, 2012年6月．
-28. 児島陽平，伊藤雄一，**藤田和之**，中島康祐，尾上孝雄．空間内の複数人員配置のための指示位置提示手法に関する検討，_ヒューマンインタフェース学会研究報告集_, Vol. 14, No. 8, 2012年6月．
-29. 竹中拓也，岸野文郎，**藤田和之**，中島康祐，伊藤雄一．二者間の着座状態と会話の活性度の関係に関する検討，_電子情報通信学会総合大会論文集_, pp. A-14-2, 2012年3月．
-30. 新宅彩加，岸野文郎，石原のぞみ，**藤田和之**，伊藤雄一．書籍固有の情報を用いた書籍の明るさ判定，_電子情報通信学会総合大会論文集_, pp. A-16-19, 2012年3月．
-31. 林勇介，伊藤雄一，中島康祐，**藤田和之**，高嶋和毅，大坊郁夫，尾上孝雄．カップ型デバイス Cup-le を用いた会話実験支援手法，_ヒューマンインタフェースシンポジウム2011論文集_, pp. 405-408, 2011年9月．
-32. **藤田和之**，高嶋和毅，伊藤雄一，大崎博之，小野直亮，香川景一郎，津川翔，中島康祐，林勇介，岸野文郎．Ambient Suite: 部屋型情報空間を用いた対人コミュニケーション支援，_ヒューマンインタフェースシンポジウム2011論文集_, pp. 395-400, 2011年9月．
-33. 大脇正憲，**藤田和之**，高嶋和毅，伊藤雄一，北村喜文．マルチタッチ入力環境における撓みスクロール・ズーム手法，_ヒューマンインタフェースシンポジウム2011論文集_, pp. 429-434, 2011年9月．**学術奨励賞**．
-34. 藤井佑一，岸野文郎，**藤田和之**，伊藤雄一．振動ディスプレイを用いた情報可振化インタフェースの一検討，_日本バーチャルリアリティ学会第16回大会論文集_, pp. 14C-1, 2011年9月．
-35. 前田奈穂，大坊郁夫，**藤田和之**．関係開始スキルがパーティ場面におけるコミュニケーション行動に及ぼす影響，_電子情報通信学会技術研究報告_, Vol. 111, No. 190, pp. 5-10, 2011年8月．
-36. 藤井佑一，藤川翔平，岸野文郎，**藤田和之**，伊藤雄一．情報可振化インタフェース実現のための一検討，_電子情報通信学会総合大会論文集_, pp. A-15-20, 2011年3月．
-37. **藤田和之**，高嶋和毅，築谷喬之，伊藤雄一，北村喜文，岸野文郎．地図ナビゲーションにおけるバーチャルカメラのパン・ズーム・チルトの連動に関する検討，_日本バーチャルリアリティ学会第15回大会論文集_, pp. 3B1-2, 2010年9月．
-38. 吉田愛，伊藤雄一，尾崎麻耶，菊川哲也，深澤遼，**藤田和之**，高嶋和毅，北村喜文，岸野文郎．アソブレラ：雨の振動を記録・再生する傘型デバイス，_インタラクティブ東京2009シンポジウム_，2009年10月．
-39. **藤田和之**，伊藤雄一，吉田愛，尾崎麻耶，菊川哲也，深澤遼，高嶋和毅，北村喜文，岸野文郎．アソブレラ：雨と遊ぶ，_エンタテインメントコンピューティング2009 (EC2009) 論文集_, pp. 73-74, 2009年9月．
+25. 藤井佑一，岸野文郎，**藤田和之**，中島康祐，伊藤雄一，菊地日出男．U-brella: 降り注ぐ情報を可振化するポータブル傘型インタフェース，_日本バーチャルリアリティ学会第17回大会論文集_ ，pp. 652-655, 2012年9月．
+26. 高嶋和毅，**藤田和之**，横山ひとみ，伊藤雄一，北村喜文．6人会話における非言語情報と場の活性度に関する検討，_電子情報通信学会技術研究報告_ ，Vol. 112, No. 176 pp. 49-54, 2012年8月．
+27. 遠藤隆介，伊藤雄一，中島康祐，**藤田和之**，岸野文郎．マルチタッチディスプレイを用いたプランニングができるデジタルサイネージシステムの提案，_ヒューマンインタフェース学会研究報告集_ , Vol. 14, No. 8, 2012年6月．
+28. 児島陽平，伊藤雄一，**藤田和之**，中島康祐，尾上孝雄．空間内の複数人員配置のための指示位置提示手法に関する検討，_ヒューマンインタフェース学会研究報告集_ , Vol. 14, No. 8, 2012年6月．
+29. 竹中拓也，岸野文郎，**藤田和之**，中島康祐，伊藤雄一．二者間の着座状態と会話の活性度の関係に関する検討，_電子情報通信学会総合大会論文集_ , pp. A-14-2, 2012年3月．
+30. 新宅彩加，岸野文郎，石原のぞみ，**藤田和之**，伊藤雄一．書籍固有の情報を用いた書籍の明るさ判定，_電子情報通信学会総合大会論文集_ , pp. A-16-19, 2012年3月．
+31. 林勇介，伊藤雄一，中島康祐，**藤田和之**，高嶋和毅，大坊郁夫，尾上孝雄．カップ型デバイス Cup-le を用いた会話実験支援手法，_ヒューマンインタフェースシンポジウム2011論文集_ , pp. 405-408, 2011年9月．
+32. **藤田和之**，高嶋和毅，伊藤雄一，大崎博之，小野直亮，香川景一郎，津川翔，中島康祐，林勇介，岸野文郎．Ambient Suite: 部屋型情報空間を用いた対人コミュニケーション支援，_ヒューマンインタフェースシンポジウム2011論文集_ , pp. 395-400, 2011年9月．
+33. 大脇正憲，**藤田和之**，高嶋和毅，伊藤雄一，北村喜文．マルチタッチ入力環境における撓みスクロール・ズーム手法，_ヒューマンインタフェースシンポジウム2011論文集_ , pp. 429-434, 2011年9月．**学術奨励賞**．
+34. 藤井佑一，岸野文郎，**藤田和之**，伊藤雄一．振動ディスプレイを用いた情報可振化インタフェースの一検討，_日本バーチャルリアリティ学会第16回大会論文集_ , pp. 14C-1, 2011年9月．
+35. 前田奈穂，大坊郁夫，**藤田和之**．関係開始スキルがパーティ場面におけるコミュニケーション行動に及ぼす影響，_電子情報通信学会技術研究報告_ , Vol. 111, No. 190, pp. 5-10, 2011年8月．
+36. 藤井佑一，藤川翔平，岸野文郎，**藤田和之**，伊藤雄一．情報可振化インタフェース実現のための一検討，_電子情報通信学会総合大会論文集_ , pp. A-15-20, 2011年3月．
+16. 城所宏行，**藤田和之**，大脇正憲，Khoa Doba，Christopher Chung，伊藤雄一．パランガ：ページをめくる触感を再現する本型デバイス，_インタラクション2011論文集_ , pp. 609-612, 2011年3月．
+17. 中島康祐，伊藤雄一，築谷喬之，**藤田和之**，高嶋和毅，岸野文郎．FuSA2 Touch Display: 大画面毛状マルチタッチディスプレイ，_インタラクション2011論文集_ , pp. 547-550, 2011年3月．
+37. **藤田和之**，高嶋和毅，築谷喬之，伊藤雄一，北村喜文，岸野文郎．地図ナビゲーションにおけるバーチャルカメラのパン・ズーム・チルトの連動に関する検討，_日本バーチャルリアリティ学会第15回大会論文集_ , pp. 3B1-2, 2010年9月．
+38. 吉田愛，伊藤雄一，尾崎麻耶，菊川哲也，深澤遼，**藤田和之**，高嶋和毅，北村喜文，岸野文郎．アソブレラ：雨の振動を記録・再生する傘型デバイス，_インタラクティブ東京2009シンポジウム_ ，2009年10月．
+39. **藤田和之**，伊藤雄一，吉田愛，尾崎麻耶，菊川哲也，深澤遼，高嶋和毅，北村喜文，岸野文郎．アソブレラ：雨と遊ぶ，_エンタテインメントコンピューティング2009 (EC2009) 論文集_ , pp. 73-74, 2009年9月．
 40. **藤田和之**，高嶋和毅，築谷喬之，北村喜文，岸野文郎．パン操作にズームとチルトを連動させる地図ナビゲーション，_画像の認識・理解シンポジウム（MIRU2009）論文集_, pp. 1875-1876, 2009年7月．
-41. 吉田愛，伊藤雄一，尾崎麻耶，菊川哲也，深澤遼，**藤田和之**，北村喜文，岸野文郎．アソブレラ：傘軸の振動を記録・再生するシステムの検討，_電子情報通信学会技術研究報告_, Vol. 109, No. 75, pp. 65-68, 2009年6月．
+41. 吉田愛，伊藤雄一，尾崎麻耶，菊川哲也，深澤遼，**藤田和之**，北村喜文，岸野文郎．アソブレラ：傘軸の振動を記録・再生するシステムの検討，_電子情報通信学会技術研究報告_ , Vol. 109, No. 75, pp. 65-68, 2009年6月．
 
 ### Invited Talks
-1. Kazuyuki Fujita. Adaptive Spatial User Interfaces That Activate Us. _The 26th International Display Workshops (IDW '19)_, AIS1/INP2-1 (Invited), pp. 13-15, Nov. 2019.
-2. **藤田和之**．CHIワークショップ開催報告．_情報処理学会研究報告_，Vol. 2019-HCI-184, No. 11, 2019年7月.
-3. 働き方変革と未来のワークプレイス，東北大学，_第4回 共同プロジェクト研究会「人と空間と情報技術」_，2018年3月．
-4. 山田茂雄，**藤田和之**．アイデアが生まれる空間に住まう「もうひとりの参加者」，_東京大学，日本ロボット学会セミナー 第107回 インタラクションにより人や環境に適応するロボット・ＡＩの行動戦略_，2017年8月．
-5. 会議支援のための情報表出空間，_東北大学，第3回 共同プロジェクト研究会「人と空間と情報技術」_，2017年3月．
-6. Office Vision 2020 ～近未来の社会情勢予測から逆引きするオフィス像～，_東北大学，第2回 共同プロジェクト研究会「人と空間と情報技術」_，2016年2月．
-7. 協創空間 ～トランスボーダーなクリエイティブ・プラットフォームへの仕掛け～，_スルガ銀行d-laboミッドタウン セミナー_，2015年8月．
-8. イトーキとICT，東北大学，_第1回 共同プロジェクト研究会「人と空間と情報技術」_，2015年3月．
-9. **藤田和之**，城所宏行，伊藤雄一．アナログパラパラデジタルマンガ，_日本バーチャルリアリティ学会第17回大会 オーガナイズドセッション_, 2012年9月．
+1. **Kazuyuki Fujita**. Adaptive Spatial User Interfaces That Activate Us. _The 26th International Display Workshops (IDW '19)_, AIS1/INP2-1 (Invited), pp. 13-15, Nov. 2019.
+2. **藤田和之**．CHIワークショップ開催報告．_情報処理学会研究報告_ ，Vol. 2019-HCI-184, No. 11, 2019年7月.
+3. 働き方変革と未来のワークプレイス，東北大学，_第4回 共同プロジェクト研究会「人と空間と情報技術」_ ，2018年3月．
+4. 山田茂雄，**藤田和之**．アイデアが生まれる空間に住まう「もうひとりの参加者」，_東京大学，日本ロボット学会セミナー 第107回 インタラクションにより人や環境に適応するロボット・ＡＩの行動戦略_ ，2017年8月．
+5. 会議支援のための情報表出空間，_東北大学，第3回 共同プロジェクト研究会「人と空間と情報技術」_ ，2017年3月．
+6. Office Vision 2020 ～近未来の社会情勢予測から逆引きするオフィス像～，_東北大学，第2回 共同プロジェクト研究会「人と空間と情報技術」_ ，2016年2月．
+7. 協創空間 ～トランスボーダーなクリエイティブ・プラットフォームへの仕掛け～，_スルガ銀行d-laboミッドタウン セミナー_ ，2015年8月．
+8. イトーキとICT，東北大学，_第1回 共同プロジェクト研究会「人と空間と情報技術」_ ，2015年3月．
+9. **藤田和之**，城所宏行，伊藤雄一．アナログパラパラデジタルマンガ，_日本バーチャルリアリティ学会第17回大会 オーガナイズドセッション_ , 2012年9月．
 
 ## Patent
 1. 椅子、前傾角度変更装置、及び、前傾角度変更方法，特願2021-036737．
@@ -206,17 +227,19 @@ BSc in Engineering, __Osaka University__
 1. 表示装置およびプログラム，特願2011-051234，2011年3月9日．
 
 ## Awards
+1. 小川郡平，**藤田和之**，高嶋和毅，北村喜文．ハンドリダイレクションを用いた広範囲のキャンバスへのVRドローイング体験．_第31回インタラクティブシステムとソフトウェアに関するワークショップ (WISS '23) 論文集_ ，2023年12月．**対話発表賞（プログラム委員）**．
+1. 橘優希，**藤田和之**，高嶋和毅，北村喜文．スマートフォンのみによる視線トラッキング技術を用いた展示案内アプリケーション．_インタラクション2023論文集_ ，pp. 981-986, 2023年3月．**インタラクティブ発表賞（一般投票）**．
 1. Yukai Hoshikawa,**Kazuyuki Fujita**, Kazuki Takashima, Morten Fjeld, Yoshifumi Kitamura. RedirectedDoors: Redirection While Opening Doors in Virtual Reality, _Proc. of 2022 IEEE Conference on Virtual Reality and 3D User Interfaces (IEEEVR '22)_, pp. 464-473, Mar. 2022. **Honorable Mention Best Paper Award**.
 2. 中川久倫，伊藤弘大，**藤田和之**，岸楓馬，福島力也，伊藤雄一．エクスカキバー：ビジュアル・サウンドエフェクトを用いた筆記支援．_インタラクション2022論文集_，pp. 641-644, 2022年3月．**インタラクティブ発表賞（PC推薦・一般投票）**．
-3. 加藤麻奈，伊藤弘大，**藤田和之**，伊藤雄一，植物のメタファを用いたテレワーカーの感性的状態の表現方法の調査，_研究報告ヒューマンコンピュータインタラクション（HCI）_，Vol. 2022-HCI-196, No. 17, pp. 1-8, 2022年1月．**学生奨励賞**．
+3. 加藤麻奈，伊藤弘大，**藤田和之**，伊藤雄一，植物のメタファを用いたテレワーカーの感性的状態の表現方法の調査，_研究報告ヒューマンコンピュータインタラクション（HCI）_ ，Vol. 2022-HCI-196, No. 17, pp. 1-8, 2022年1月．**学生奨励賞**．
 4. Yoshiki Kudo, Anthony Tang,**Kazuyuki Fujita**, Isamu Endo, Kazuki Takashima, Yoshifumi Kitamura. Towards Balancing VR Immersion and Bystander Awareness, _Proc. of the ACM on Human-Computer Interaction (ISS '21)_, Vol. 5, Issue ISS, Article No. 484, pp 1–22, Nov. 2021. **Best Paper Award**.
-5. 伊藤雄一，石原好貴，白井僚，**藤田和之**，高嶋和毅，尾上孝雄．StickyTouch: 局所的粘着性を制御可能なタッチディスプレイ．_日本バーチャルリアリティ学会論文誌_，Vol. 25, No. 4, pp. 384-393, 2020年12月. **第23回 論文賞**．
-6. 遠藤勇，高嶋和毅，井上理哲人，清川清，**藤田和之**，北村 喜文．周辺とのアドホックなインタラクションを実現する再構成可能なVR HMD．_インタラクション2021論文集_，pp. 271-273, 2021年3月．**インタラクティブ発表賞（PC推薦）**．
-7. 林大悟，**藤田和之**，高嶋和毅，Robert W. Lindeman，北村喜文．Redirected Jumping: VRにおける跳躍動作時の移動量操作手法．_日本バーチャルリアリティ学会論文誌_，Vol. 24, Nol. 4, pp. 341-350, 2019年12月．**第22回 論文賞**．
+5. 伊藤雄一，石原好貴，白井僚，**藤田和之**，高嶋和毅，尾上孝雄．StickyTouch: 局所的粘着性を制御可能なタッチディスプレイ．_日本バーチャルリアリティ学会論文誌_ ，Vol. 25, No. 4, pp. 384-393, 2020年12月. **第23回 論文賞**．
+6. 遠藤勇，高嶋和毅，井上理哲人，清川清，**藤田和之**，北村 喜文．周辺とのアドホックなインタラクションを実現する再構成可能なVR HMD．_インタラクション2021論文集_ ，pp. 271-273, 2021年3月．**インタラクティブ発表賞（PC推薦）**．
+7. 林大悟，**藤田和之**，高嶋和毅，Robert W. Lindeman，北村喜文．Redirected Jumping: VRにおける跳躍動作時の移動量操作手法．_日本バーチャルリアリティ学会論文誌_ ，Vol. 24, Nol. 4, pp. 341-350, 2019年12月．**第22回 論文賞**．
 8. Yoshitaka Ishihara, Ryo Shirai, Yuichi Itoh,**Kazuyuki Fujita**, Takao Onoye. StickyTouch: An Adhesion Changeable Surface. _SIGGRAPH Asia 2019 Emerging Technologies_, Nov. 2019. **Best Demo Voted by Committee**.
 9. Mengting Huang,**Kazuyuki Fujita**, Kazuki Takashima, Taichi Tsuchida, Hiroyuki Manabe, Yoshifumi Kitamura. ShearSheet: Low-Cost Shear Force Input with Elastic Feedback for Augmenting Touch Interaction, _Proc. of ISS '19, pp.77-87_, Nov. 2019. **Best Demo Award**.
 10. Yoshitaka Ishihara, Shori Ueda, Yuichi Itoh,**Kazuyuki Fujita**. PlanT: A Plant-based Ambient Display Visualizing Gradually Accumulated Information. _Asian CHI Symposium: Emerging HCI Research Collection_, May. 2019. **Best Demo/Poster Awards**.
-11. Mengting Huang，**藤田和之**，高嶋和毅，真鍋宏幸，北村喜文．タッチスクリーン上に重ねた透明シートを利用した位置と速度制御の併用が可能なユーザインタフェース．_インタラクション2019論文集_，pp. 276-278, 2019年3月．**インタラクティブ発表賞（PC推薦）**．
+11. Mengting Huang，**藤田和之**，高嶋和毅，真鍋宏幸，北村喜文．タッチスクリーン上に重ねた透明シートを利用した位置と速度制御の併用が可能なユーザインタフェース．_インタラクション2019論文集_ ，pp. 276-278, 2019年3月．**インタラクティブ発表賞（PC推薦）**．
 12. Kosuke Nakajima, Yuichi Itoh, Yusuke Hayashi, Kazuaki Ikeda,**Kazuyuki Fujita**, Takao Onoye. Emoballoon. _The 10th Asia Pacific Conference on Computer Human Interaction (APCHI2012)_, Aug. 2012. **Best Poster/Demonstration Award**.
 13. 大脇正憲，**藤田和之**，高嶋和毅，伊藤雄一，北村喜文．マルチタッチ入力環境における撓みスクロール・ズーム手法，_ヒューマンインタフェースシンポジウム2011論文集_, pp. 429-434, 2011年9月．**第12回 ヒューマンインタフェース学会 学術奨励賞 (2011年度)**．
 14. 第18回 国際学生対抗バーチャルリアリティコンテスト (IVRC2010) **明和電機社長賞**，作品名：パランガ，2010年8月．
@@ -245,17 +268,15 @@ BSc in Engineering, __Osaka University__
 
 
 ## Academic Service
-### Program Committee
-- ISS 2021-2022
+### Program Committee / Journal Editorial Board
+- ISS (Proc. ACM on Human-Computer Interaction) 2021-2024
 - VRST 2018, 2019
-
-### Journal Editorial Board
-- ヒューマンインタフェース学会論文誌 2021-現在
+- ヒューマンインタフェース学会論文誌 2021-2024
 - 電子情報通信学会論文誌 ヒューマンコミュニケーション特集号 2019-2022
 
 ### Organizing Committee
+- WISS 2023 動画生中継係
 - ヒューマンインタフェースシンポジウム2023 企画係
-- Interverse Virtual Reality Challenge (IVRC) 2022 広報係
 - ACM VRST 2021 Communication Chair, Poster/Demo Chair
 - Asian CHI Symposium 2021 Accessibility Chair
 - Asian CHI Symposium 2020 Liaison with IPSJ
@@ -263,10 +284,10 @@ BSc in Engineering, __Osaka University__
 - 日本バーチャルリアリティ学会大会 2018 会場係
 
 ### Reviewer
-- CHI 2020-2023
+- CHI 2020-2024
 - UIST 2019-2021
-- IEEEVR 2019-2022
-- ISMAR 2021-2022
+- IEEEVR 2019-2023
+- ISMAR 2021-2023
 - VRST 2018-2021
 - TEI 2022
 - SUI 2018
@@ -281,7 +302,7 @@ BSc in Engineering, __Osaka University__
 ### Others
 - 日本バーチャルリアリティ学会 ニューズレター委員 2021-現在
 - 日本バーチャルリアリティ学会 学会誌委員 2019-2021
-- Interverse Virtual Reality Challenge (IVRC) 実行委員 2022
+- Interverse Virtual Reality Challenge (IVRC) 実行委員 2022-現在
 
 ## References
 
