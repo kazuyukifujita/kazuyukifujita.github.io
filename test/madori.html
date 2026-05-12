@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>間取り & 家具スケッチャー - 250mm自動配置版</title>
+    <title>間取り & 家具スケッチャー - サイズ最適化版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -37,18 +37,19 @@
         const GRID_PIXELS = 15;   
         const SCALE_FACTOR = 0.25; 
 
-        // 部屋のマスターデータ
+        // 部屋のデフォルトサイズ設定 (mmからユニット数へ変換)
         const ROOM_TYPES = [
-            { label: 'リビング', defaultW: 14, defaultH: 16, color: 'bg-orange-100 border-orange-400', type: 'room' },
-            { label: 'DK', defaultW: 14, defaultH: 12, color: 'bg-yellow-50 border-yellow-400', type: 'room' },
-            { label: '玄関', defaultW: 8, defaultH: 6, color: 'bg-stone-100 border-stone-500', type: 'room' },
-            { label: '階段', defaultW: 4, defaultH: 8, color: 'bg-zinc-200 border-zinc-500', type: 'room' },
-            { label: 'WIC', defaultW: 8, defaultH: 8, color: 'bg-purple-100 border-purple-400', type: 'room' },
+            { label: 'リビング', defaultW: 20, defaultH: 14, color: 'bg-orange-100 border-orange-400', type: 'room' }, // 5000x3500
+            { label: 'ダイニング', defaultW: 12, defaultH: 10, color: 'bg-yellow-50 border-yellow-400', type: 'room' },
+            { label: 'キッチン', defaultW: 10, defaultH: 8, color: 'bg-emerald-50 border-emerald-400', type: 'room' },
+            { label: '玄関', defaultW: 12, defaultH: 12, color: 'bg-stone-100 border-stone-500', type: 'room' }, // 3000x3000
+            { label: '浴室', defaultW: 8, defaultH: 8, color: 'bg-cyan-100 border-cyan-400', type: 'room' },    // 2000x2000
+            { label: 'トイレ', defaultW: 8, defaultH: 4, color: 'bg-slate-100 border-slate-400', type: 'room' }, // 2000x1000
+            { label: '洗面', defaultW: 8, defaultH: 6, color: 'bg-blue-50 border-blue-300', type: 'room' },    // 2000x1500
+            { label: 'ランドリー', defaultW: 8, defaultH: 8, color: 'bg-teal-50 border-teal-300', type: 'room' }, // 2000x2000
+            { label: 'WIC', defaultW: 12, defaultH: 8, color: 'bg-purple-100 border-purple-400', type: 'room' }, // 3000x2000
             { label: 'ワークスペース', defaultW: 8, defaultH: 8, color: 'bg-indigo-100 border-indigo-300', type: 'room' },
-            { label: '浴室', defaultW: 8, defaultH: 8, color: 'bg-cyan-100 border-cyan-400', type: 'room' },
-            { label: 'トイレ', defaultW: 4, defaultH: 6, color: 'bg-slate-100 border-slate-400', type: 'room' },
-            { label: '洗面', defaultW: 8, defaultH: 6, color: 'bg-blue-50 border-blue-300', type: 'room' },
-            { label: 'ランドリー', defaultW: 8, defaultH: 8, color: 'bg-emerald-50 border-emerald-300', type: 'room' },
+            { label: '階段', defaultW: 4, defaultH: 8, color: 'bg-zinc-200 border-zinc-500', type: 'room' },
             { label: '収納', defaultW: 4, defaultH: 8, color: 'bg-stone-200 border-stone-400', type: 'room' },
         ];
 
@@ -56,7 +57,7 @@
             { label: 'ソファー', defaultW: 8, defaultH: 4, color: 'bg-indigo-200 border-indigo-500', type: 'furniture', icon: 'Armchair' },
             { label: '食卓', defaultW: 6, defaultH: 6, color: 'bg-amber-200 border-amber-500', type: 'furniture', icon: 'Utensils' },
             { label: 'テレビ台', defaultW: 8, defaultH: 2, color: 'bg-zinc-300 border-zinc-600', type: 'furniture', icon: 'Tv' },
-            { label: 'キッチン', defaultW: 10, defaultH: 4, color: 'bg-emerald-200 border-emerald-500', type: 'furniture', icon: 'ChefHat' },
+            { label: 'キッチン設備', defaultW: 10, defaultH: 4, color: 'bg-emerald-200 border-emerald-500', type: 'furniture', icon: 'ChefHat' },
             { label: 'カップボード', defaultW: 8, defaultH: 2, color: 'bg-orange-200 border-orange-500', type: 'furniture', icon: 'Layout' },
         ];
 
@@ -83,12 +84,11 @@
                 Maximize2: <><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>,
                 Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
                 Box: <><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></>,
-                Type: <><path d="M4 7V4h16v3"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></>,
-                Info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>
+                Type: <><path d="M4 7V4h16v3"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></>
             };
             return (
                 <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    {icons[name] || icons.Info}
+                    {icons[name] || icons.Home}
                 </svg>
             );
         };
@@ -101,8 +101,66 @@
             const [isDragging, setIsDragging] = useState(false);
             const [isResizing, setIsResizing] = useState(false);
             const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-            const [baseDraft, setBaseDraft] = useState({ w: 48, h: 40 }); // 12m x 10m default
+            
+            const [savedPlans, setSavedPlans] = useState([]);
+            const [planTitle, setPlanTitle] = useState('');
+            
+            // デフォルトの家の外形サイズ: 11000 x 7000 (ユニット数 44 x 28)
+            const [baseDraft, setBaseDraft] = useState({ w: 44, h: 28 }); 
+            const [zoom, setZoom] = useState(1);
+            
             const canvasRef = useRef(null);
+            const mainRef = useRef(null);
+
+            // 起動時に保存済みデータを読み込む
+            useEffect(() => {
+                const data = localStorage.getItem('madori_sketched_plans');
+                if (data) {
+                    try {
+                        setSavedPlans(JSON.parse(data));
+                    } catch (e) {
+                        console.error("Failed to parse saved plans", e);
+                    }
+                }
+            }, []);
+
+            const saveCurrentPlan = () => {
+                if (!elements.length) return;
+                const name = prompt("間取りの名前を入力してください", planTitle || "案1");
+                if (!name) return;
+
+                const newPlan = {
+                    id: Date.now(),
+                    name: name,
+                    date: new Date().toLocaleString(),
+                    elements: elements,
+                    baseDraft: baseDraft
+                };
+
+                const updatedPlans = [newPlan, ...savedPlans];
+                setSavedPlans(updatedPlans);
+                localStorage.setItem('madori_sketched_plans', JSON.stringify(updatedPlans));
+                setPlanTitle(name);
+            };
+
+            const loadPlan = (plan) => {
+                if (elements.length > 0 && !confirm("現在の作業内容が上書きされます。よろしいですか？")) {
+                    return;
+                }
+                setElements(plan.elements);
+                setBaseDraft(plan.baseDraft);
+                setPlanTitle(plan.name);
+                setSelectedId(null);
+                setTimeout(updateZoom, 100);
+            };
+
+            const deletePlan = (e, planId) => {
+                e.stopPropagation();
+                if (!confirm("この保存データを削除しますか？")) return;
+                const updatedPlans = savedPlans.filter(p => p.id !== planId);
+                setSavedPlans(updatedPlans);
+                localStorage.setItem('madori_sketched_plans', JSON.stringify(updatedPlans));
+            };
 
             const calculateArea = (w, h) => {
                 const sqm = (w * SCALE_FACTOR * h * SCALE_FACTOR).toFixed(2);
@@ -114,28 +172,45 @@
             const gridToMm = (val) => Math.round(val * UNIT_SIZE_MM);
             const mmToGrid = (mm) => Math.max(1, Math.round(mm / UNIT_SIZE_MM));
 
+            const updateZoom = useCallback(() => {
+                if (!mainRef.current || !canvasRef.current) return;
+                const container = mainRef.current;
+                const base = elements.find(el => el.type === 'base');
+                if (!base) return;
+
+                const targetW = base.w * GRID_PIXELS;
+                const targetH = base.h * GRID_PIXELS;
+                
+                const padding = 80;
+                const scaleX = (container.clientWidth - padding) / targetW;
+                const scaleY = (container.clientHeight - padding) / targetH;
+                
+                setZoom(Math.min(scaleX, scaleY, 2.5)); 
+            }, [elements]);
+
+            useEffect(() => {
+                window.addEventListener('resize', updateZoom);
+                updateZoom();
+                return () => window.removeEventListener('resize', updateZoom);
+            }, [updateZoom]);
+
             const handleConfirmBase = () => {
                 const baseElement = {
                     id: 1,
-                    label: '家の外形',
-                    x: 0,
-                    y: 0,
-                    w: baseDraft.w,
-                    h: baseDraft.h,
+                    label: '外形',
+                    x: 0, y: 0,
+                    w: baseDraft.w, h: baseDraft.h,
                     color: 'bg-white border-slate-300 border-4 border-dashed',
                     type: 'base',
                     rotation: 0,
                     isFixed: true,
                 };
 
-                // 初期部屋セットの自動配置ロジック
-                // (0,0)から順番に、できるだけ重ならないように並べる簡易アルゴリズム
                 let currentX = 0;
                 let currentY = 0;
                 let maxHeightInRow = 0;
 
                 const initialRooms = ROOM_TYPES.map((type, index) => {
-                    // もし現在の行に収まらない場合は改行
                     if (currentX + type.defaultW > baseDraft.w) {
                         currentX = 0;
                         currentY += maxHeightInRow;
@@ -154,11 +229,11 @@
 
                     currentX += type.defaultW;
                     maxHeightInRow = Math.max(maxHeightInRow, type.defaultH);
-
                     return room;
                 });
 
                 setElements([baseElement, ...initialRooms]);
+                setTimeout(updateZoom, 50);
             };
 
             const addElement = (proto, isCustom = false) => {
@@ -171,8 +246,7 @@
                 const newElement = {
                     id: Date.now(),
                     label: isCustom ? (proto.type === 'label' ? labelText || 'ラベル' : customName || '新規アイテム') : proto.label,
-                    x: 4,
-                    y: 4,
+                    x: 4, y: 4,
                     w: proto.defaultW || 8,
                     h: proto.defaultH || 4,
                     color: colorClass || 'bg-transparent border-transparent',
@@ -193,9 +267,13 @@
                 e.stopPropagation();
                 setSelectedId(element.id);
                 const rect = e.currentTarget.getBoundingClientRect();
+                
                 if (action === 'move' && !element.isFixed) {
                     setIsDragging(true);
-                    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+                    setDragOffset({ 
+                        x: (e.clientX - rect.left) / zoom, 
+                        y: (e.clientY - rect.top) / zoom 
+                    });
                 } else if (action === 'resize') {
                     setIsResizing(true);
                 }
@@ -204,13 +282,12 @@
             const handleMouseMove = useCallback((e) => {
                 if (!isDragging && !isResizing) return;
                 const canvasRect = canvasRef.current.getBoundingClientRect();
-                const rawX = e.clientX - canvasRect.left;
-                const rawY = e.clientY - canvasRect.top;
+                const rawX = (e.clientX - canvasRect.left) / zoom;
+                const rawY = (e.clientY - canvasRect.top) / zoom;
 
                 setElements(prev => prev.map(el => {
                     if (el.id !== selectedId) return el;
                     if (isDragging && !el.isFixed) {
-                        // 250mm単位のスナップ
                         return {
                             ...el,
                             x: Math.round((rawX - dragOffset.x) / GRID_PIXELS),
@@ -218,7 +295,6 @@
                         };
                     }
                     if (isResizing) {
-                        // 250mm単位のスナップ
                         return {
                             ...el,
                             w: Math.max(1, Math.round((rawX - el.x * GRID_PIXELS) / GRID_PIXELS)),
@@ -227,7 +303,7 @@
                     }
                     return el;
                 }));
-            }, [isDragging, isResizing, selectedId, dragOffset]);
+            }, [isDragging, isResizing, selectedId, dragOffset, zoom]);
 
             const handleMouseUp = () => {
                 setIsDragging(false);
@@ -266,41 +342,82 @@
                             <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Icon name="Home" size={24} /></div>
                             <div>
                                 <h1 className="text-lg font-bold leading-tight">間取りスケッチャー</h1>
-                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">250mm Precision / Auto-Init</p>
+                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">{planTitle || 'New Project'} / 250mm Precision</p>
                             </div>
                         </div>
-                        {baseElement && (
-                            <div className="flex items-center gap-8 animate-in fade-in zoom-in duration-500">
+                        {baseDraft && (
+                            <div className="flex items-center gap-6">
                                 <div className="flex gap-6 border-r pr-6 border-slate-200">
                                     <div className="text-right">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-tighter">建物の大きさ(外形)</span>
+                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-tighter">外形面積</span>
                                         <span className="text-xl font-black">{stats.baseArea.toFixed(1)} <small className="text-xs font-normal">㎡</small></span>
                                     </div>
                                     <div className="text-right">
-                                        <span className="block text-[10px] font-bold text-indigo-400 uppercase tracking-tighter">合計部屋面積</span>
+                                        <span className="block text-[10px] font-bold text-indigo-400 uppercase tracking-tighter">延床面積</span>
                                         <span className="text-xl font-black text-indigo-600">{stats.floorArea.toFixed(1)} <small className="text-xs font-normal">㎡</small></span>
                                     </div>
-                                    <div className="text-right">
-                                        <span className="block text-[10px] font-bold text-rose-400 uppercase tracking-tighter">充填率</span>
-                                        <span className="text-xl font-black text-rose-500">{stats.coverageRatio}%</span>
-                                    </div>
                                 </div>
-                                <button onClick={() => { if(confirm('全てリセットしますか？')) setElements([])}} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Icon name="RotateCcw" /></button>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={saveCurrentPlan}
+                                        className="flex items-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-xl font-bold hover:bg-indigo-100 transition-all active:scale-95 text-sm"
+                                    >
+                                        <Icon name="Layout" size={18} />
+                                        <span>保存</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => window.print()} 
+                                        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-bold shadow-md hover:bg-indigo-600 transition-all active:scale-95 text-sm"
+                                    >
+                                        <Icon name="Download" size={18} />
+                                        <span>印刷 / 保存</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => { if(confirm('全てリセットしますか？')) { setElements([]); setPlanTitle(''); } }} 
+                                        className="p-2 text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl"
+                                    >
+                                        <Icon name="RotateCcw" />
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </header>
 
                     <div className="flex flex-1 overflow-hidden">
-                        { }
                         <aside className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-5 space-y-6 scrollbar-hide">
+                            {savedPlans.length > 0 && (
+                                <section className="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-2">
+                                    <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2 uppercase tracking-wider">保存済みデータ</h3>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-hide">
+                                        {savedPlans.map(plan => (
+                                            <div 
+                                                key={plan.id}
+                                                onClick={() => loadPlan(plan)}
+                                                className="group flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer"
+                                            >
+                                                <div className="overflow-hidden">
+                                                    <p className="text-xs font-bold text-slate-700 truncate">{plan.name}</p>
+                                                    <p className="text-[9px] text-slate-400">{plan.date}</p>
+                                                </div>
+                                                <button 
+                                                    onClick={(e) => deletePlan(e, plan.id)}
+                                                    className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Icon name="Trash2" size={14} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
                             {!baseElement ? (
                                 <section className="space-y-4 pt-4">
                                     <div className="bg-indigo-50 p-5 rounded-2xl border-2 border-indigo-100 shadow-sm text-center">
                                         <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white mx-auto mb-4">
                                             <Icon name="Box" size={24} />
                                         </div>
-                                        <h3 className="text-sm font-bold text-indigo-900 mb-2">家のサイズ（外形）を指定</h3>
-                                        <p className="text-[11px] text-slate-500 mb-6 leading-relaxed">まずは外形のサイズを入力してください。確定後、標準的な部屋セットが自動で配置されます。</p>
+                                        <h3 className="text-sm font-bold text-indigo-900 mb-2">家のサイズを指定</h3>
                                         <div className="space-y-4 text-left">
                                             <div>
                                                 <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">幅 (mm)</label>
@@ -310,21 +427,17 @@
                                                 <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">奥行 (mm)</label>
                                                 <input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(parseInt(e.target.value) || UNIT_SIZE_MM)})} className="w-full text-sm font-bold bg-white border border-indigo-200 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-indigo-400"/>
                                             </div>
-                                            <button 
-                                                onClick={handleConfirmBase}
-                                                className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-indigo-700 active:scale-95 transition-all"
-                                            >
-                                                外形を確定して配置する
+                                            <button onClick={handleConfirmBase} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all">
+                                                確定して配置
                                             </button>
                                         </div>
                                     </div>
                                 </section>
                             ) : (
                                 <div className="space-y-6 animate-in slide-in-from-left duration-300">
-                                    {/* Selection Controls */}
                                     {selectedId && elements.filter(el => el.id === selectedId).map(el => (
                                         <section key={el.id} className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-4 shadow-sm">
-                                            <h3 className="text-xs font-bold text-indigo-900 flex items-center gap-2"><Icon name="Info" size={14} /> 編集: {el.label}</h3>
+                                            <h3 className="text-xs font-bold text-indigo-900 flex items-center gap-2">編集: {el.label}</h3>
                                             <input type="text" value={el.label} onChange={(e) => setElements(elements.map(item => item.id === el.id ? {...item, label: e.target.value} : item))} className="w-full text-sm font-bold bg-white rounded-lg px-3 py-2 outline-none shadow-inner"/>
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div><label className="text-[10px] font-bold text-indigo-400 block mb-1 uppercase">幅 (mm)</label>
@@ -342,7 +455,7 @@
                                     ))}
 
                                     <section className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                        <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2 uppercase tracking-wider"><Icon name="Plus" size={14} /> 自由に追加</h3>
+                                        <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2 uppercase tracking-wider"><Icon name="Plus" size={14} /> パーツの追加</h3>
                                         <input type="text" placeholder="名前" value={customName} onChange={(e) => setCustomName(e.target.value)} className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mb-2 outline-none focus:ring-2 ring-indigo-300"/>
                                         <div className="grid grid-cols-2 gap-2">
                                             <button onClick={() => addElement({ type: 'room', defaultW: 8, defaultH: 8 }, true)} className="bg-white border border-slate-200 hover:bg-indigo-50 py-2 rounded-lg text-[10px] font-black transition-all">部屋</button>
@@ -351,10 +464,10 @@
                                     </section>
 
                                     <section>
-                                        <h3 className="text-xs font-bold text-slate-400 mb-3 px-1 uppercase tracking-widest">部屋・家具パーツ</h3>
-                                        <div className="grid grid-cols-2 gap-2">
+                                        <h3 className="text-xs font-bold text-slate-400 mb-3 px-1 uppercase tracking-widest">部屋・家具リスト</h3>
+                                        <div className="grid grid-cols-2 gap-2 pb-10">
                                             {ROOM_TYPES.map(type => (
-                                                <button key={type.label} onClick={() => addElement(type)} className="flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-300 transition-all group">
+                                                <button key={type.label} onClick={() => addElement(type)} className="flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-300 transition-all group text-center">
                                                     <div className={`w-full h-8 rounded-md ${type.color.split(' ')[0]} border ${type.color.split(' ')[1]}`} />
                                                     <span className="text-[10px] font-bold text-slate-600 group-hover:text-indigo-600">{type.label}</span>
                                                 </button>
@@ -362,7 +475,7 @@
                                             {FURNITURE_TYPES.map(type => (
                                                 <button key={type.label} onClick={() => addElement(type)} className="flex items-center gap-2 p-2 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-300 transition-all text-left group">
                                                     <Icon name={type.icon} size={14} className="text-slate-400 group-hover:text-indigo-500" />
-                                                    <span className="text-[10px] font-bold text-slate-600 group-hover:text-indigo-600">{type.label}</span>
+                                                    <span className="text-[10px] font-bold text-slate-600 group-hover:text-indigo-600 whitespace-nowrap overflow-hidden text-ellipsis">{type.label}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -371,86 +484,85 @@
                             )}
                         </aside>
 
-                        { }
-                        <main className="flex-1 relative overflow-auto p-12 bg-slate-200/50 flex items-start justify-center">
+                        <main ref={mainRef} className="flex-1 relative overflow-hidden p-8 bg-slate-200/50 flex items-center justify-center">
                             {baseElement ? (
                                 <div 
-                                    ref={canvasRef}
-                                    className="relative bg-white shadow-2xl transition-all duration-500 ease-out animate-in fade-in zoom-in-95"
-                                    style={{ 
-                                        width: baseElement.w * GRID_PIXELS, 
-                                        height: baseElement.h * GRID_PIXELS,
-                                        backgroundImage: `
-                                            linear-gradient(#f1f5f9 1px, transparent 1px), 
-                                            linear-gradient(90deg, #f1f5f9 1px, transparent 1px),
-                                            linear-gradient(#e2e8f0 1px, transparent 1px), 
-                                            linear-gradient(90deg, #e2e8f0 1px, transparent 1px)
-                                        `,
-                                        backgroundSize: `${GRID_PIXELS}px ${GRID_PIXELS}px, ${GRID_PIXELS}px ${GRID_PIXELS}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px`
-                                    }}
-                                    onMouseDown={() => setSelectedId(null)}
+                                    className="relative flex items-center justify-center transition-transform duration-300 ease-out"
+                                    style={{ transform: `scale(${zoom})` }}
                                 >
-                                    {sortedElements.map(el => {
-                                        const isSelected = selectedId === el.id;
-                                        const { sqm, tatami, tsubo } = calculateArea(el.w, el.h);
-                                        const layerClass = el.type === 'base' ? 'layer-base' : el.type === 'room' ? 'layer-room' : el.type === 'furniture' ? 'layer-furniture' : 'layer-label';
-                                        
-                                        return (
-                                            <div
-                                                key={el.id}
-                                                onMouseDown={(e) => handleMouseDown(e, el, 'move')}
-                                                className={`absolute transition-all flex flex-col items-center justify-center 
-                                                    ${el.color} ${layerClass} 
-                                                    ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 shadow-2xl z-40 scale-[1.01]' : ''} 
-                                                    ${el.type === 'furniture' ? 'rounded-md opacity-90' : ''} 
-                                                    ${el.isFixed ? 'cursor-default pointer-events-none opacity-50' : 'cursor-move'}`}
-                                                style={{ left: el.x * GRID_PIXELS, top: el.y * GRID_PIXELS, width: el.w * GRID_PIXELS, height: el.h * GRID_PIXELS, transform: `rotate(${el.rotation}deg)` }}
-                                            >
-                                                <div className="p-1 text-center pointer-events-none select-none overflow-hidden w-full">
-                                                    <span className={`font-black text-slate-800 leading-tight block uppercase truncate 
-                                                        ${el.type === 'base' ? 'text-4xl text-slate-200 opacity-20 mt-10' : 
-                                                          el.type === 'furniture' ? 'text-[8px]' : 'text-[10px]'}`}>
-                                                        {el.label}
-                                                    </span>
-                                                    {el.type === 'room' && (
-                                                        <span className="text-[8px] font-bold text-slate-500 opacity-60 block truncate">
-                                                            {tatami}J / {sqm}㎡
+                                    <div 
+                                        ref={canvasRef}
+                                        className="relative bg-white shadow-2xl transition-all duration-500 ease-out"
+                                        style={{ 
+                                            width: baseElement.w * GRID_PIXELS, 
+                                            height: baseElement.h * GRID_PIXELS,
+                                            backgroundImage: `
+                                                linear-gradient(#f1f5f9 1px, transparent 1px), 
+                                                linear-gradient(90deg, #f1f5f9 1px, transparent 1px),
+                                                linear-gradient(#e2e8f0 1px, transparent 1px), 
+                                                linear-gradient(90deg, #e2e8f0 1px, transparent 1px)
+                                            `,
+                                            backgroundSize: `${GRID_PIXELS}px ${GRID_PIXELS}px, ${GRID_PIXELS}px ${GRID_PIXELS}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px`
+                                        }}
+                                        onMouseDown={() => setSelectedId(null)}
+                                    >
+                                        {sortedElements.map(el => {
+                                            const isSelected = selectedId === el.id;
+                                            const { sqm, tatami } = calculateArea(el.w, el.h);
+                                            const layerClass = el.type === 'base' ? 'layer-base' : el.type === 'room' ? 'layer-room' : el.type === 'furniture' ? 'layer-furniture' : 'layer-label';
+                                            
+                                            return (
+                                                <div
+                                                    key={el.id}
+                                                    onMouseDown={(e) => handleMouseDown(e, el, 'move')}
+                                                    className={`absolute flex flex-col items-center justify-center 
+                                                        ${el.color} ${layerClass} 
+                                                        ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 shadow-2xl z-40 scale-[1.01]' : ''} 
+                                                        ${el.type === 'furniture' ? 'rounded-md opacity-90' : ''} 
+                                                        ${el.isFixed ? 'cursor-default pointer-events-none' : 'cursor-move'}`}
+                                                    style={{ 
+                                                        left: el.x * GRID_PIXELS, 
+                                                        top: el.y * GRID_PIXELS, 
+                                                        width: el.w * GRID_PIXELS, 
+                                                        height: el.h * GRID_PIXELS, 
+                                                        transform: `rotate(${el.rotation}deg)` 
+                                                    }}
+                                                >
+                                                    <div className="p-1 text-center pointer-events-none select-none overflow-hidden w-full">
+                                                        <span className={`font-black text-slate-800 leading-tight block uppercase truncate 
+                                                            ${el.type === 'base' ? 'text-4xl text-slate-200 opacity-20' : 
+                                                              el.type === 'furniture' ? 'text-[8px]' : 'text-[10px]'}`}>
+                                                            {el.label}
                                                         </span>
-                                                    )}
-                                                </div>
-                                                {isSelected && !el.isFixed && (
-                                                    <div className="layer-ui">
-                                                        <div className="absolute -top-3 -right-3 w-6 h-6 bg-white border border-indigo-200 text-indigo-600 rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); setElements(elements.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}>
-                                                            <Icon name="RotateCw" size={14} />
-                                                        </div>
                                                         {el.type === 'room' && (
-                                                            <div onMouseDown={(e) => handleMouseDown(e, el, 'resize')} className="absolute -bottom-2 -right-2 w-5 h-5 cursor-nwse-resize bg-indigo-600 text-white rounded-full flex items-center justify-center border-2 border-white">
-                                                                <Icon name="Maximize2" size={10} />
-                                                            </div>
+                                                            <span className="text-[8px] font-bold text-slate-500 opacity-60 block truncate">
+                                                                {tatami}J / {sqm}㎡
+                                                            </span>
                                                         )}
                                                     </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                                    {isSelected && !el.isFixed && (
+                                                        <div className="layer-ui">
+                                                            <div className="absolute -top-3 -right-3 w-6 h-6 bg-white border border-indigo-200 text-indigo-600 rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); setElements(elements.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}>
+                                                                <Icon name="RotateCw" size={14} />
+                                                            </div>
+                                                            <div onMouseDown={(e) => handleMouseDown(e, el, 'resize')} className="absolute -bottom-2 -right-2 w-5 h-5 cursor-nwse-resize bg-indigo-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md hover:scale-125 transition-transform">
+                                                                <Icon name="Maximize2" size={10} />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-slate-300">
                                     <Icon name="Box" size={80} className="mb-4 opacity-20 animate-pulse" />
-                                    <p className="font-bold text-lg">サイドバーで家のサイズを指定してください</p>
+                                    <p className="font-bold text-lg text-slate-400">家のサイズを決定して開始</p>
                                 </div>
                             )}
                         </main>
                     </div>
-
-                    {baseElement && (
-                        <div className="fixed bottom-8 right-8 layer-ui">
-                            <button onClick={() => window.print()} className="flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-full font-bold shadow-2xl hover:bg-indigo-600 transition-all active:scale-95 group">
-                                <Icon name="Download" size={20} className="group-hover:translate-y-0.5" />
-                                <span>図面を印刷 / PDF保存</span>
-                            </button>
-                        </div>
-                    )}
                 </div>
             );
         };
