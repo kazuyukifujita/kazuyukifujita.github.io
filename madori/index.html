@@ -3,20 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>間取りスケッチャー - Web公開版</title>
+    <title>間取りスケッチャー v8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { 
-            font-family: 'Inter', 'Noto Sans JP', sans-serif; 
-            touch-action: none;
-            overscroll-behavior: none;
-        }
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; touch-action: none; overscroll-behavior: none; margin: 0; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -27,10 +22,13 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
+        // 定数
         const UNIT_SIZE_MM = 250;
         const GRID_PIXELS = 15;   
         const SCALE_FACTOR = 0.25; 
+        const WORLD_SIZE = 10000;
 
+        // 部屋の厳密なデフォルトサイズ (mm / 250 = units)
         const ROOM_DATA = [
             { label: 'リビング', defaultW: 20, defaultH: 14, color: 'bg-orange-100 border-orange-300', type: 'room' },
             { label: 'ダイニング', defaultW: 12, defaultH: 12, color: 'bg-amber-50 border-amber-300', type: 'room' },
@@ -53,24 +51,36 @@
             { label: 'カップボード', defaultW: 8, defaultH: 2, color: 'bg-orange-200 border-orange-400', type: 'furniture', icon: 'Layout' },
         ];
 
-        const LucideIcon = ({ name, size = 18, className = "" }) => {
-            const IconComponent = lucide[name] || lucide.HelpCircle;
-            return <IconComponent size={size} className={className} />;
+        // 外部ライブラリなしで動くSVGアイコン
+        const SvgIcon = ({ name, size = 18, className = "" }) => {
+            const paths = {
+                Home: <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>,
+                Save: <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>,
+                Download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>,
+                Rotate: <path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>,
+                Trash: <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>,
+                Resize: <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>,
+                Search: <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>,
+                Settings: <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {paths[name] || <circle cx="12" cy="12" r="10" />}
+                </svg>
+            );
         };
 
         const App = () => {
             const [elements, setElements] = useState([]);
             const [selectedId, setSelectedId] = useState(null);
-            const [baseDraft, setBaseDraft] = useState({ w: 44, h: 28 });
+            const [baseDraft, setBaseDraft] = useState({ w: 44, h: 28 }); // 11m x 7m
             const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
             const [interactionMode, setInteractionMode] = useState(null);
             const [savedPlans, setSavedPlans] = useState([]);
 
             const mainRef = useRef(null);
             const canvasRef = useRef(null);
-            const interactionRef = useRef({ 
-                startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0, startDist: 0, initialScale: 1
-            });
+            const interactionRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0, startDist: 0, initialScale: 1 });
 
             const mmToGrid = (mm) => Math.max(1, Math.round(mm / UNIT_SIZE_MM));
             const gridToMm = (grid) => grid * UNIT_SIZE_MM;
@@ -83,13 +93,18 @@
                 return { sqm, tatami, mWidth, mHeight };
             };
 
+            useEffect(() => {
+                const stored = localStorage.getItem('madori_v8_final');
+                if (stored) setSavedPlans(JSON.parse(stored));
+            }, []);
+
             const savePlan = () => {
-                const name = prompt("プラン名を入力してください", `案 ${new Date().toLocaleTimeString()}`);
+                const name = prompt("プラン名を入力", `案 ${new Date().toLocaleTimeString()}`);
                 if (!name) return;
                 const newPlan = { id: Date.now(), name, elements, timestamp: new Date().toISOString() };
                 const updated = [newPlan, ...savedPlans];
                 setSavedPlans(updated);
-                localStorage.setItem('madori_web_v1', JSON.stringify(updated));
+                localStorage.setItem('madori_v8_final', JSON.stringify(updated));
             };
 
             const resetView = useCallback(() => {
@@ -97,27 +112,16 @@
                 const base = elements.find(e => e.type === 'base');
                 if (!base) return;
                 const padding = 100;
-                const availW = mainRef.current.clientWidth - padding;
-                const availH = mainRef.current.clientHeight - padding;
-                const contentW = base.w * GRID_PIXELS;
-                const contentH = base.h * GRID_PIXELS;
-                const newScale = Math.min(availW / contentW, availH / contentH, 1.3);
-                setView({
-                    x: (mainRef.current.clientWidth - contentW * newScale) / 2,
-                    y: (mainRef.current.clientHeight - contentH * newScale) / 2,
-                    scale: newScale
-                });
+                const scale = Math.min((mainRef.current.clientWidth - padding) / (base.w * GRID_PIXELS), (mainRef.current.clientHeight - padding) / (base.h * GRID_PIXELS), 1.2);
+                setView({ x: (mainRef.current.clientWidth - base.w * GRID_PIXELS * scale) / 2, y: (mainRef.current.clientHeight - base.h * GRID_PIXELS * scale) / 2, scale });
             }, [elements]);
 
             const addElement = (proto) => {
                 const id = Date.now();
-                const newEl = {
-                    id, label: proto.label, x: 4, y: 4, w: proto.defaultW, h: proto.defaultH,
-                    color: proto.color, type: proto.type, rotation: 0, isFixed: proto.type === 'base'
-                };
+                const newEl = { id, label: proto.label, x: 4, y: 4, w: proto.defaultW, h: proto.defaultH, color: proto.color, type: proto.type, rotation: 0, isFixed: proto.type === 'base' };
                 if (proto.type === 'base') {
                     const initialRooms = ROOM_DATA.map((r, i) => {
-                        const coords = [{x: 0, y: 0}, {x: 20, y: 0}, {x: 32, y: 0}, {x: 0, y: 14}, {x: 12, y: 14}, {x: 20, y: 14}, {x: 28, y: 14}, {x: 36, y: 14}, {x: 20, y: 22}, {x: 32, y: 20}, {x: 0, y: 24}];
+                        const coords = [{x:0,y:0},{x:20,y:0},{x:32,y:0},{x:0,y:14},{x:12,y:14},{x:20,y:14},{x:28,y:14},{x:36,y:14},{x:20,y:22},{x:32,y:20},{x:0,y:24}];
                         return { ...r, id: id + i + 1, x: coords[i]?.x ?? 4, y: coords[i]?.y ?? 4, rotation: 0 };
                     });
                     setElements([{...newEl, x: 0, y: 0, w: baseDraft.w, h: baseDraft.h}, ...initialRooms]);
@@ -129,23 +133,16 @@
             };
 
             const onPointerDown = (e) => {
-                const touches = e.nativeEvent instanceof TouchEvent ? e.nativeEvent.touches : null;
-                if (touches && touches.length === 2) {
-                    const dist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
-                    interactionRef.current = { ...interactionRef.current, startDist: dist, initialScale: view.scale };
-                    setInteractionMode('zoom');
-                    return;
-                }
                 const clientX = e.clientX;
                 const clientY = e.clientY;
                 const target = e.target.closest('[data-id]');
                 const action = e.target.closest('[data-action]')?.dataset.action;
+
                 if (target) {
                     const id = parseInt(target.dataset.id);
                     const el = elements.find(item => item.id === id);
                     if (el.type === 'base') {
-                        setSelectedId(null);
-                        setInteractionMode('pan');
+                        setSelectedId(null); setInteractionMode('pan');
                         interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialViewX: view.x, initialViewY: view.y };
                         return;
                     }
@@ -158,8 +155,7 @@
                         interactionRef.current = { startX: clientX, startY: clientY, initialX: el.x, initialY: el.y };
                     }
                 } else {
-                    setSelectedId(null);
-                    setInteractionMode('pan');
+                    setSelectedId(null); setInteractionMode('pan');
                     interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialViewX: view.x, initialViewY: view.y };
                 }
                 e.target.setPointerCapture(e.pointerId);
@@ -167,15 +163,9 @@
 
             const onPointerMove = useCallback((e) => {
                 if (!interactionMode) return;
-                const touches = e.nativeEvent instanceof TouchEvent ? e.nativeEvent.touches : null;
-                if (interactionMode === 'zoom' && touches?.length === 2) {
-                    const dist = Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
-                    const ratio = dist / interactionRef.current.startDist;
-                    setView(v => ({ ...v, scale: Math.min(Math.max(interactionRef.current.initialScale * ratio, 0.2), 4) }));
-                    return;
-                }
                 const clientX = e.clientX;
                 const clientY = e.clientY;
+
                 if (interactionMode === 'pan') {
                     setView(v => ({ ...v, x: interactionRef.current.initialViewX + (clientX - interactionRef.current.startX), y: interactionRef.current.initialViewY + (clientY - interactionRef.current.startY) }));
                 } else if (interactionMode === 'move' || interactionMode === 'resize') {
@@ -189,35 +179,31 @@
                 }
             }, [interactionMode, selectedId, view.scale]);
 
-            const onPointerUp = (e) => {
-                setInteractionMode(null);
-                if (e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
-            };
-
             const exportPNG = async () => {
-                const capture = await html2canvas(canvasRef.current, { scale: 2 });
+                if (!canvasRef.current) return;
+                const capture = await html2canvas(canvasRef.current, { scale: 2, backgroundColor: "#f1f5f9" });
                 const link = document.createElement('a');
                 link.download = 'floorplan.png';
                 link.href = capture.toDataURL();
                 link.click();
             };
 
-            const baseEl = elements.find(e => e.type === 'base');
             const selectedEl = elements.find(e => e.id === selectedId);
+            const baseEl = elements.find(e => e.type === 'base');
 
             return (
                 <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans select-none text-slate-900">
                     <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center z-50 shrink-0 shadow-sm">
                         <div className="flex items-center gap-3">
-                            <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><LucideIcon name="Home" size={22} /></div>
+                            <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><SvgIcon name="Home" size={24} /></div>
                             <div>
                                 <h1 className="text-lg font-bold leading-tight">間取りスケッチャー</h1>
-                                <p className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">Precise Layout System</p>
+                                <p className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">0.25m Precision Logic</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={savePlan} className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-sm"><LucideIcon name="Save" size={16}/><span>保存</span></button>
-                            <button onClick={exportPNG} className="bg-slate-900 text-white px-5 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-lg"><LucideIcon name="Download" size={16}/><span>出力</span></button>
+                            <button onClick={savePlan} className="bg-white border-2 border-slate-100 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-black hover:bg-slate-50 transition-all shadow-sm uppercase"><SvgIcon name="Save" size={16}/><span>保存</span></button>
+                            <button onClick={exportPNG} className="bg-slate-900 text-white px-5 py-2 rounded-xl flex items-center gap-2 text-xs font-black hover:bg-slate-800 transition-all shadow-lg uppercase"><SvgIcon name="Download" size={16}/><span>出力</span></button>
                         </div>
                     </header>
 
@@ -225,26 +211,20 @@
                         <aside className="w-16 sm:w-64 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-2 sm:p-5 space-y-6 scrollbar-hide z-40 shrink-0 shadow-xl">
                             {!baseEl ? (
                                 <section className="space-y-4 pt-2">
-                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">外形サイズ確定</h3>
-                                    <div className="space-y-3 text-xs">
-                                        <div className="space-y-1">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">幅 (mm)</label>
-                                            <input type="number" step="250" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border-2 border-slate-50 rounded-2xl outline-none focus:ring-4 ring-indigo-50 bg-slate-50 font-bold"/>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">奥行 (mm)</label>
-                                            <input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border-2 border-slate-50 rounded-2xl outline-none focus:ring-4 ring-indigo-50 bg-slate-50 font-bold"/>
-                                        </div>
-                                        <button onClick={() => addElement({ type: 'base' })} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-indigo-700 active:scale-95 transition-all mt-2 tracking-widest">確定して配置</button>
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">家のサイズを決定</h3>
+                                    <div className="space-y-4 text-xs">
+                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">幅 (mm)</label><input type="number" step="250" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 ring-indigo-50 bg-slate-50 font-black text-lg"/></div>
+                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">奥行 (mm)</label><input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border-2 border-slate-100 rounded-2xl outline-none focus:ring-4 ring-indigo-50 bg-slate-50 font-black text-lg"/></div>
+                                        <button onClick={() => addElement({ type: 'base' })} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-700 active:scale-95 transition-all mt-4 tracking-widest">確定して配置</button>
                                     </div>
                                 </section>
                             ) : (
                                 <div className="space-y-6">
                                     {/* 寸法調整パネル */}
                                     <section className="p-4 bg-slate-50 border-2 border-slate-100 rounded-2xl space-y-4 shadow-inner">
-                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><LucideIcon name="Settings" size={14}/> {selectedEl && selectedEl.type !== 'base' ? 'パーツ寸法' : '家の外寸'}</h3>
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><SvgIcon name="Settings" size={14}/> {selectedEl && selectedEl.type !== 'base' ? 'パーツ寸法' : '家の外寸'}</h3>
                                         <div className="grid grid-cols-1 gap-3">
-                                            <div className="space-y-1">
+                                            <div>
                                                 <label className="text-[9px] font-black text-slate-500">幅 (mm)</label>
                                                 <input type="number" step="250" 
                                                     value={selectedEl ? gridToMm(selectedEl.w) : gridToMm(baseEl.w)} 
@@ -254,7 +234,7 @@
                                                         setElements(prev => prev.map(el => el.id === targetId ? {...el, w: mmToGrid(mm)} : el));
                                                     }} className="w-full p-2.5 text-sm border rounded-xl bg-white font-black outline-none focus:ring-2 ring-indigo-200"/>
                                             </div>
-                                            <div className="space-y-1">
+                                            <div>
                                                 <label className="text-[9px] font-black text-slate-500">奥行 (mm)</label>
                                                 <input type="number" step="250" 
                                                     value={selectedEl ? gridToMm(selectedEl.h) : gridToMm(baseEl.h)} 
@@ -266,26 +246,23 @@
                                             </div>
                                         </div>
                                     </section>
-
                                     <section>
-                                        <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest px-1">部屋を追加</h3>
+                                        <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">部屋を追加</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {ROOM_DATA.map(r => (
-                                                <button key={r.label} onClick={() => addElement(r)} className="flex flex-col items-center p-2.5 rounded-2xl border-2 border-slate-50 bg-slate-50 hover:border-indigo-200 active:scale-90 transition-all group shrink-0">
+                                                <button key={r.label} onClick={() => addElement(r)} className="flex flex-col items-center p-2.5 rounded-2xl border-2 border-slate-50 bg-slate-50 hover:border-indigo-200 active:scale-90 transition-all group shrink-0 shadow-sm">
                                                     <div className={`w-full h-4 sm:h-7 rounded-lg ${r.color.split(' ')[0]} border ${r.color.split(' ')[1]}`} />
-                                                    <span className="text-[9px] font-black text-slate-600 mt-2 truncate w-full text-center group-hover:text-indigo-600">{r.label}</span>
+                                                    <span className="text-[9px] font-black text-slate-600 mt-2 truncate w-full text-center group-hover:text-indigo-600 uppercase tracking-tighter">{r.label}</span>
                                                 </button>
                                             ))}
                                         </div>
                                     </section>
-
                                     <section>
-                                        <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest px-1">家具を追加</h3>
+                                        <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">家具を追加</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                             {FURNITURE_DATA.map(f => (
-                                                <button key={f.label} onClick={() => addElement(f)} className="flex flex-col items-center p-2.5 rounded-2xl border-2 border-slate-50 bg-slate-50 hover:border-indigo-200 active:scale-90 transition-all group shrink-0">
-                                                    <LucideIcon name={f.icon} size={18} className="text-slate-400 group-hover:text-indigo-600" />
-                                                    <span className="hidden sm:inline text-[9px] font-black text-slate-600 mt-2 group-hover:text-indigo-600">{f.label}</span>
+                                                <button key={f.label} onClick={() => addElement(f)} className="flex flex-col items-center p-2.5 rounded-2xl border-2 border-slate-50 bg-slate-50 hover:border-indigo-200 active:scale-90 transition-all group shrink-0 shadow-sm">
+                                                    <span className="text-[9px] font-black text-slate-600 group-hover:text-indigo-600 uppercase tracking-tighter">{f.label}</span>
                                                 </button>
                                             ))}
                                         </div>
@@ -294,13 +271,13 @@
                             )}
                         </aside>
 
-                        <main ref={mainRef} className="flex-1 bg-slate-200 relative overflow-hidden touch-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+                        <main ref={mainRef} className="flex-1 bg-slate-200 relative overflow-hidden touch-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(e) => {setInteractionMode(null); e.target.releasePointerCapture(e.pointerId);}}>
                             <div className="absolute inset-0 pointer-events-none transition-transform duration-75 ease-out origin-top-left" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
                                 {/* 無限風グリッド背景 */}
-                                <div className="absolute top-[-10000px] left-[-10000px] w-[20000px] h-[20000px]" style={{
+                                <div className="absolute top-[-5000px] left-[-5000px] w-[10000px] h-[10000px] bg-slate-100" style={{
                                     backgroundImage: `
-                                        linear-gradient(to right, #e2e8f0 1.5px, transparent 1.5px), linear-gradient(to bottom, #e2e8f0 1.5px, transparent 1.5px),
-                                        linear-gradient(to right, #cbd5e1 0.5px, transparent 0.5px), linear-gradient(to bottom, #cbd5e1 0.5px, transparent 0.5px)
+                                        linear-gradient(to right, #cbd5e1 1.5px, transparent 1.5px), linear-gradient(to bottom, #cbd5e1 1.5px, transparent 1.5px),
+                                        linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px)
                                     `,
                                     backgroundSize: `${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px, ${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px`
                                 }} />
@@ -308,41 +285,41 @@
                                 <div ref={canvasRef} className="relative">
                                     {[...elements].sort((a, b) => (a.type === 'base' ? -1 : 1)).map(el => {
                                         const isSelected = selectedId === el.id;
-                                        const { sqm, tatami, mWidth, mHeight } = calculateArea(el.w, el.h);
+                                        const area = calculateArea(el.w, el.h);
                                         const isBase = el.type === 'base';
 
                                         return (
                                             <div key={el.id} data-id={el.id} className={`absolute flex flex-col items-center justify-center border-2 transition-all
-                                                ${el.color} ${isBase ? 'pointer-events-none border-dashed border-slate-300 bg-white/80' : 'pointer-events-auto cursor-move'}
-                                                ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-4 z-40 shadow-2xl' : 'z-10 shadow-sm'}`}
+                                                ${el.color} ${isBase ? 'pointer-events-none border-dashed border-slate-300 bg-white/90 shadow-2xl' : 'pointer-events-auto cursor-move shadow-sm'}
+                                                ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-4 z-40 scale-[1.01]' : 'z-10'}`}
                                                 style={{ left: el.x * GRID_PIXELS, top: el.y * GRID_PIXELS, width: el.w * GRID_PIXELS, height: el.h * GRID_PIXELS, transform: `rotate(${el.rotation}deg)` }}
                                             >
                                                 <div className="text-center p-2 pointer-events-none w-full overflow-hidden">
-                                                    <span className={`font-black text-slate-800 leading-none block ${isBase ? 'text-7xl text-slate-100 mt-28 opacity-20' : 'text-[11px]'}`}>{el.label}</span>
+                                                    <span className={`font-black text-slate-800 leading-none block ${isBase ? 'text-7xl text-slate-100 mt-28 opacity-10' : 'text-[11px]'}`}>{el.label}</span>
                                                     {!isBase && el.type === 'room' && (
                                                         <div className="mt-1 space-y-0.5">
-                                                            <span className="text-[9px] text-slate-500 block font-black uppercase tracking-tighter leading-none">{tatami}畳 / {sqm}㎡</span>
-                                                            <span className="text-[8px] text-indigo-400 block font-black leading-none">{mWidth}m × {mHeight}m</span>
+                                                            <span className="text-[9px] text-slate-500 block font-black uppercase tracking-tighter leading-none">{area.tatami}畳 / {area.sqm}㎡</span>
+                                                            <span className="text-[8px] text-indigo-400 block font-black leading-none">{area.mWidth}m × {area.mHeight}m</span>
                                                         </div>
                                                     )}
                                                 </div>
 
                                                 {isSelected && !isBase && (
                                                     <div className="pointer-events-auto">
-                                                        <div className="absolute -top-7 -right-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-indigo-600"
+                                                        <div className="absolute -top-7 -right-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-indigo-600 active:scale-75 transition-transform"
                                                             onClick={(e) => { e.stopPropagation(); setElements(prev => prev.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}
                                                         >
-                                                            <LucideIcon name="RotateCw" size={24} />
+                                                            <SvgIcon name="Rotate" size={24} />
                                                         </div>
                                                         {el.type === 'room' && (
-                                                            <div className="absolute -bottom-8 -right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white cursor-nwse-resize z-50 touch-none" data-action="resize">
-                                                                <LucideIcon name="Maximize2" size={32} />
+                                                            <div className="absolute -bottom-8 -right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white cursor-nwse-resize z-50 active:scale-90 transition-transform touch-none" data-action="resize">
+                                                                <SvgIcon name="Resize" size={32} />
                                                             </div>
                                                         )}
-                                                        <div className="absolute -top-7 -left-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-red-500"
+                                                        <div className="absolute -top-7 -left-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-red-500 active:scale-75 transition-transform"
                                                             onClick={(e) => { e.stopPropagation(); setElements(prev => prev.filter(item => item.id !== el.id)); setSelectedId(null); }}
                                                         >
-                                                            <LucideIcon name="Trash2" size={24} />
+                                                            <SvgIcon name="Trash" size={24} />
                                                         </div>
                                                     </div>
                                                 )}
@@ -353,10 +330,10 @@
                             </div>
 
                             <div className="absolute bottom-10 right-10 flex flex-col gap-5 z-50 no-print">
-                                <button onClick={resetView} className="w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center text-indigo-600 active:bg-indigo-50 border border-slate-100"><LucideIcon name="Search" size={32} /></button>
+                                <button onClick={resetView} className="w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center text-indigo-600 active:bg-indigo-50 border border-slate-100 hover:scale-110 active:scale-95 transition-all"><SvgIcon name="Search" size={32} /></button>
                                 <div className="bg-white rounded-[2.5rem] shadow-2xl flex flex-col border border-slate-100 overflow-hidden">
-                                    <button onClick={() => setView(v => ({...v, scale: Math.min(v.scale * 1.2, 4)}))} className="w-16 h-16 flex items-center justify-center font-black text-3xl active:bg-slate-50 border-b-2 border-slate-50">+</button>
-                                    <button onClick={() => setView(v => ({...v, scale: Math.max(v.scale * 0.8, 0.2)}))} className="w-16 h-16 flex items-center justify-center font-black text-3xl active:bg-slate-50">-</button>
+                                    <button onClick={() => setView(v => ({...v, scale: Math.min(v.scale * 1.2, 4)}))} className="w-16 h-16 flex items-center justify-center font-black text-3xl active:bg-slate-50 border-b-2 border-slate-50 transition-colors">+</button>
+                                    <button onClick={() => setView(v => ({...v, scale: Math.max(v.scale * 0.8, 0.2)}))} className="w-16 h-16 flex items-center justify-center font-black text-3xl active:bg-slate-50 transition-colors">-</button>
                                 </div>
                             </div>
                         </main>
