@@ -1,574 +1,379 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>間取り & 家具スケッチャー - サイズ最適化版</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .layer-base { z-index: 1; }
-        .layer-room { z-index: 10; }
-        .layer-furniture { z-index: 20; }
-        .layer-label { z-index: 30; }
-        .layer-ui { z-index: 50; }
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { 
+  Home, Download, RotateCw, Trash2, 
+  Maximize2, Search, Settings, Armchair, 
+  Utensils, Tv, Layout, ChefHat, Save 
+} from 'lucide-react';
 
-        @media print {
-            .layer-ui, aside, header, .fixed { display: none !important; }
-            .flex-1 { overflow: visible !important; }
-            body { background: white; }
+// --- 定数定義 (250mm = 1ユニット) ---
+const UNIT_SIZE_MM = 250;
+const GRID_PIXELS = 15;   
+const SCALE_FACTOR = 0.25; // 1ユニット = 0.25m
+
+// 厳密なデフォルトサイズ定義 (mm / 250 = units)
+const ROOM_DATA = [
+  { label: 'リビング', defaultW: 20, defaultH: 14, color: 'bg-orange-100 border-orange-300', type: 'room' }, // 5.0m x 3.5m
+  { label: 'ダイニング', defaultW: 12, defaultH: 12, color: 'bg-amber-50 border-amber-300', type: 'room' },    // 3.0m x 3.0m
+  { label: 'キッチン', defaultW: 12, defaultH: 8, color: 'bg-yellow-50 border-yellow-200', type: 'room' },    // 3.0m x 2.0m
+  { label: '玄関', defaultW: 12, defaultH: 12, color: 'bg-stone-100 border-stone-400', type: 'room' },       // 3.0m x 3.0m
+  { label: 'ワークスペース', defaultW: 8, defaultH: 8, color: 'bg-indigo-100 border-indigo-200', type: 'room' },// 2.0m x 2.0m
+  { label: '風呂', defaultW: 8, defaultH: 8, color: 'bg-cyan-50 border-cyan-300', type: 'room' },            // 2.0m x 2.0m
+  { label: 'トイレ', defaultW: 8, defaultH: 4, color: 'bg-slate-50 border-slate-300', type: 'room' },         // 2.0m x 1.0m
+  { label: '洗面', defaultW: 8, defaultH: 6, color: 'bg-blue-50 border-blue-200', type: 'room' },            // 2.0m x 1.5m
+  { label: 'ランドリー', defaultW: 8, defaultH: 8, color: 'bg-emerald-50 border-emerald-200', type: 'room' }, // 2.0m x 2.0m
+  { label: 'WIC', defaultW: 12, defaultH: 8, color: 'bg-stone-200 border-stone-300', type: 'room' },         // 3.0m x 2.0m
+  { label: '階段', defaultW: 8, defaultH: 4, color: 'bg-zinc-50 border-zinc-300', type: 'room' },            // 2.0m x 1.0m
+];
+
+const FURNITURE_DATA = [
+  { label: 'ソファー', defaultW: 8, defaultH: 4, color: 'bg-indigo-200 border-indigo-400', type: 'furniture', icon: Armchair },
+  { label: '食卓', defaultW: 6, defaultH: 6, color: 'bg-amber-200 border-amber-400', type: 'furniture', icon: Utensils },
+  { label: 'テレビ台', defaultW: 8, defaultH: 2, color: 'bg-zinc-300 border-zinc-500', type: 'furniture', icon: Tv },
+  { label: 'キッチン設備', defaultW: 10, defaultH: 4, color: 'bg-emerald-200 border-emerald-400', type: 'furniture', icon: ChefHat },
+  { label: 'カップボード', defaultW: 8, defaultH: 2, color: 'bg-orange-200 border-orange-400', type: 'furniture', icon: Layout },
+];
+
+export default function App() {
+  const [elements, setElements] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [baseDraft, setBaseDraft] = useState({ w: 44, h: 28 }); // 11000 x 7000
+  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const [interactionMode, setInteractionMode] = useState(null);
+  const [savedPlans, setSavedPlans] = useState([]);
+
+  const mainRef = useRef(null);
+  const canvasRef = useRef(null);
+  const interactionRef = useRef({ 
+    startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0
+  });
+
+  const mmToGrid = (mm) => Math.max(1, Math.round(mm / UNIT_SIZE_MM));
+  const gridToMm = (grid) => grid * UNIT_SIZE_MM;
+
+  const calculateArea = (w, h) => {
+    const sqm = (w * SCALE_FACTOR * h * SCALE_FACTOR).toFixed(2);
+    const tatami = (sqm / 1.62).toFixed(1);
+    const mWidth = (w * SCALE_FACTOR).toFixed(2);
+    const mHeight = (h * SCALE_FACTOR).toFixed(2);
+    return { sqm, tatami, mWidth, mHeight };
+  };
+
+  useEffect(() => {
+    const stored = localStorage.getItem('madori_v8_final');
+    if (stored) setSavedPlans(JSON.parse(stored));
+  }, []);
+
+  const savePlan = () => {
+    const name = prompt("プラン名を入力してください", `案 ${new Date().toLocaleTimeString()}`);
+    if (!name) return;
+    const newPlan = { id: Date.now(), name, elements, timestamp: new Date().toISOString() };
+    const updated = [newPlan, ...savedPlans];
+    setSavedPlans(updated);
+    localStorage.setItem('madori_v8_final', JSON.stringify(updated));
+  };
+
+  const resetView = useCallback(() => {
+    if (!mainRef.current) return;
+    const base = elements.find(e => e.type === 'base');
+    if (!base) return;
+    const padding = 100;
+    const availW = mainRef.current.clientWidth - padding;
+    const availH = mainRef.current.clientHeight - padding;
+    const contentW = base.w * GRID_PIXELS;
+    const contentH = base.h * GRID_PIXELS;
+    const newScale = Math.min(availW / contentW, availH / contentH, 1.4);
+    setView({
+      x: (mainRef.current.clientWidth - contentW * newScale) / 2,
+      y: (mainRef.current.clientHeight - contentH * newScale) / 2,
+      scale: newScale
+    });
+  }, [elements]);
+
+  const addElement = (proto) => {
+    const id = Date.now();
+    const newEl = {
+      id,
+      label: proto.label,
+      x: proto.type === 'base' ? 0 : 4,
+      y: proto.type === 'base' ? 0 : 4,
+      w: proto.defaultW,
+      h: proto.defaultH,
+      color: proto.color,
+      type: proto.type,
+      rotation: 0,
+      isFixed: proto.type === 'base'
+    };
+
+    if (proto.type === 'base') {
+      // 11m x 7m (44x28) 内への初期配置
+      const initialRooms = ROOM_DATA.map((r, i) => {
+        // 重なりを最小化するための座標セット
+        const coords = [
+          {x: 0, y: 0},   {x: 20, y: 0},  {x: 32, y: 0},  // リビング, ダイニング, キッチン
+          {x: 0, y: 14},  {x: 12, y: 14}, {x: 20, y: 14}, // 玄関, Wspace, 風呂
+          {x: 28, y: 14}, {x: 36, y: 14}, {x: 20, y: 22}, // トイレ, 洗面, ランドリー
+          {x: 32, y: 20}, {x: 0, y: 24}                  // WIC, 階段
+        ];
+        return {
+          ...r,
+          id: id + i + 1,
+          x: coords[i]?.x ?? 4,
+          y: coords[i]?.y ?? 4,
+          w: r.defaultW,
+          h: r.defaultH,
+          rotation: 0
+        };
+      });
+      setElements([newEl, ...initialRooms]);
+      setTimeout(resetView, 50);
+    } else {
+      setElements(prev => [...prev, newEl]);
+    }
+    setSelectedId(id);
+  };
+
+  const onPointerDown = (e) => {
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    const target = e.target.closest('[data-id]');
+    const action = e.target.closest('[data-action]')?.dataset.action;
+
+    if (target) {
+      const id = parseInt(target.dataset.id);
+      const el = elements.find(item => item.id === id);
+      if (el.type === 'base') {
+        setSelectedId(null);
+        setInteractionMode('pan');
+        interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialViewX: view.x, initialViewY: view.y };
+        return;
+      }
+      setSelectedId(id);
+      if (action === 'resize') {
+        setInteractionMode('resize');
+        interactionRef.current = { startX: clientX, startY: clientY, initialW: el.w, initialH: el.h };
+      } else {
+        setInteractionMode('move');
+        interactionRef.current = { startX: clientX, startY: clientY, initialX: el.x, initialY: el.y };
+      }
+    } else {
+      setSelectedId(null);
+      setInteractionMode('pan');
+      interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialViewX: view.x, initialViewY: view.y };
+    }
+    e.target.setPointerCapture(e.pointerId);
+  };
+
+  const onPointerMove = useCallback((e) => {
+    if (!interactionMode) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (interactionMode === 'pan') {
+      setView(v => ({
+        ...v,
+        x: interactionRef.current.initialViewX + (clientX - interactionRef.current.startX),
+        y: interactionRef.current.initialViewY + (clientY - interactionRef.current.startY)
+      }));
+    } else if (interactionMode === 'move' || interactionMode === 'resize') {
+      const dx = (clientX - interactionRef.current.startX) / (view.scale * GRID_PIXELS);
+      const dy = (clientY - interactionRef.current.startY) / (view.scale * GRID_PIXELS);
+
+      setElements(prev => prev.map(el => {
+        if (el.id !== selectedId) return el;
+        if (interactionMode === 'move') {
+          return { ...el, x: Math.round(interactionRef.current.initialX + dx), y: Math.round(interactionRef.current.initialY + dy) };
+        } else {
+          return { ...el, w: Math.max(1, Math.round(interactionRef.current.initialW + dx)), h: Math.max(1, Math.round(interactionRef.current.initialH + dy)) };
         }
-    </style>
-</head>
-<body class="bg-slate-100 text-slate-800">
-    <div id="root"></div>
+      }));
+    }
+  }, [interactionMode, selectedId, view.scale]);
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+  const onPointerUp = (e) => {
+    setInteractionMode(null);
+    if (e.target.hasPointerCapture(e.pointerId)) e.target.releasePointerCapture(e.pointerId);
+  };
 
-        const UNIT_SIZE_MM = 250; 
-        const GRID_PIXELS = 15;   
-        const SCALE_FACTOR = 0.25; 
+  const onWheel = (e) => {
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    setView(v => ({ ...v, scale: Math.min(Math.max(v.scale * delta, 0.2), 4) }));
+  };
 
-        // 部屋のデフォルトサイズ設定 (mmからユニット数へ変換)
-        const ROOM_TYPES = [
-            { label: 'リビング', defaultW: 20, defaultH: 14, color: 'bg-orange-100 border-orange-400', type: 'room' }, // 5000x3500
-            { label: 'ダイニング', defaultW: 12, defaultH: 10, color: 'bg-yellow-50 border-yellow-400', type: 'room' },
-            { label: 'キッチン', defaultW: 10, defaultH: 8, color: 'bg-emerald-50 border-emerald-400', type: 'room' },
-            { label: '玄関', defaultW: 12, defaultH: 12, color: 'bg-stone-100 border-stone-500', type: 'room' }, // 3000x3000
-            { label: '浴室', defaultW: 8, defaultH: 8, color: 'bg-cyan-100 border-cyan-400', type: 'room' },    // 2000x2000
-            { label: 'トイレ', defaultW: 8, defaultH: 4, color: 'bg-slate-100 border-slate-400', type: 'room' }, // 2000x1000
-            { label: '洗面', defaultW: 8, defaultH: 6, color: 'bg-blue-50 border-blue-300', type: 'room' },    // 2000x1500
-            { label: 'ランドリー', defaultW: 8, defaultH: 8, color: 'bg-teal-50 border-teal-300', type: 'room' }, // 2000x2000
-            { label: 'WIC', defaultW: 12, defaultH: 8, color: 'bg-purple-100 border-purple-400', type: 'room' }, // 3000x2000
-            { label: 'ワークスペース', defaultW: 8, defaultH: 8, color: 'bg-indigo-100 border-indigo-300', type: 'room' },
-            { label: '階段', defaultW: 4, defaultH: 8, color: 'bg-zinc-200 border-zinc-500', type: 'room' },
-            { label: '収納', defaultW: 4, defaultH: 8, color: 'bg-stone-200 border-stone-400', type: 'room' },
-        ];
+  const sortedElements = useMemo(() => {
+    const order = { 'base': 0, 'room': 1, 'furniture': 2 };
+    return [...elements].sort((a, b) => order[a.type] - order[b.type]);
+  }, [elements]);
 
-        const FURNITURE_TYPES = [
-            { label: 'ソファー', defaultW: 8, defaultH: 4, color: 'bg-indigo-200 border-indigo-500', type: 'furniture', icon: 'Armchair' },
-            { label: '食卓', defaultW: 6, defaultH: 6, color: 'bg-amber-200 border-amber-500', type: 'furniture', icon: 'Utensils' },
-            { label: 'テレビ台', defaultW: 8, defaultH: 2, color: 'bg-zinc-300 border-zinc-600', type: 'furniture', icon: 'Tv' },
-            { label: 'キッチン設備', defaultW: 10, defaultH: 4, color: 'bg-emerald-200 border-emerald-500', type: 'furniture', icon: 'ChefHat' },
-            { label: 'カップボード', defaultW: 8, defaultH: 2, color: 'bg-orange-200 border-orange-500', type: 'furniture', icon: 'Layout' },
-        ];
+  const baseEl = elements.find(e => e.type === 'base');
 
-        const COLOR_PALETTES = [
-            { bg: 'bg-rose-100', border: 'border-rose-400' },
-            { bg: 'bg-sky-100', border: 'border-sky-400' },
-            { bg: 'bg-teal-100', border: 'border-teal-400' },
-            { bg: 'bg-lime-100', border: 'border-lime-400' },
-            { bg: 'bg-amber-100', border: 'border-amber-400' },
-        ];
+  return (
+    <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans select-none text-slate-900">
+      <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center z-50 shrink-0 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Home size={22} /></div>
+          <div>
+            <h1 className="text-lg font-bold leading-tight">間取りスケッチャー</h1>
+            <p className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">0.25m Precision Grid</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={savePlan} className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold hover:bg-slate-50 transition-all shadow-sm">
+            <Save size={16}/><span>保存</span>
+          </button>
+          <button onClick={() => window.print()} className="bg-slate-900 text-white px-5 py-2 rounded-xl flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all shadow-lg">
+            <Download size={16}/><span>出力</span>
+          </button>
+        </div>
+      </header>
 
-        const Icon = ({ name, size = 20, className = "" }) => {
-            const icons = {
-                Home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
-                Plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
-                RotateCcw: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></>,
-                RotateCw: <><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></>,
-                Trash2: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
-                Layout: <><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></>,
-                Armchair: <><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2Z"/><path d="M5 18v2"/><path d="M19 18v2"/></>,
-                Utensils: <><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></>,
-                Tv: <><rect width="20" height="15" x="2" y="3" rx="2"/><polyline points="17 2 12 7 7 2"/></>,
-                ChefHat: <><path d="M17 18a2 2 0 0 0 2-2c0-1.5-1.5-2.5-1.5-2.5a5 5 0 1 0-11 0c0 .5-1.5 1-1.5 2.5a2 2 0 0 0 2 2"/><line x1="6" y1="18" x2="18" y2="18"/><line x1="6" y1="22" x2="18" y2="22"/></>,
-                Maximize2: <><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>,
-                Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
-                Box: <><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></>,
-                Type: <><path d="M4 7V4h16v3"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></>
-            };
-            return (
-                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                    {icons[name] || icons.Home}
-                </svg>
-            );
-        };
-
-        const App = () => {
-            const [elements, setElements] = useState([]);
-            const [selectedId, setSelectedId] = useState(null);
-            const [customName, setCustomName] = useState('');
-            const [labelText, setLabelText] = useState('');
-            const [isDragging, setIsDragging] = useState(false);
-            const [isResizing, setIsResizing] = useState(false);
-            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-            
-            const [savedPlans, setSavedPlans] = useState([]);
-            const [planTitle, setPlanTitle] = useState('');
-            
-            // デフォルトの家の外形サイズ: 11000 x 7000 (ユニット数 44 x 28)
-            const [baseDraft, setBaseDraft] = useState({ w: 44, h: 28 }); 
-            const [zoom, setZoom] = useState(1);
-            
-            const canvasRef = useRef(null);
-            const mainRef = useRef(null);
-
-            // 起動時に保存済みデータを読み込む
-            useEffect(() => {
-                const data = localStorage.getItem('madori_sketched_plans');
-                if (data) {
-                    try {
-                        setSavedPlans(JSON.parse(data));
-                    } catch (e) {
-                        console.error("Failed to parse saved plans", e);
-                    }
-                }
-            }, []);
-
-            const saveCurrentPlan = () => {
-                if (!elements.length) return;
-                const name = prompt("間取りの名前を入力してください", planTitle || "案1");
-                if (!name) return;
-
-                const newPlan = {
-                    id: Date.now(),
-                    name: name,
-                    date: new Date().toLocaleString(),
-                    elements: elements,
-                    baseDraft: baseDraft
-                };
-
-                const updatedPlans = [newPlan, ...savedPlans];
-                setSavedPlans(updatedPlans);
-                localStorage.setItem('madori_sketched_plans', JSON.stringify(updatedPlans));
-                setPlanTitle(name);
-            };
-
-            const loadPlan = (plan) => {
-                if (elements.length > 0 && !confirm("現在の作業内容が上書きされます。よろしいですか？")) {
-                    return;
-                }
-                setElements(plan.elements);
-                setBaseDraft(plan.baseDraft);
-                setPlanTitle(plan.name);
-                setSelectedId(null);
-                setTimeout(updateZoom, 100);
-            };
-
-            const deletePlan = (e, planId) => {
-                e.stopPropagation();
-                if (!confirm("この保存データを削除しますか？")) return;
-                const updatedPlans = savedPlans.filter(p => p.id !== planId);
-                setSavedPlans(updatedPlans);
-                localStorage.setItem('madori_sketched_plans', JSON.stringify(updatedPlans));
-            };
-
-            const calculateArea = (w, h) => {
-                const sqm = (w * SCALE_FACTOR * h * SCALE_FACTOR).toFixed(2);
-                const tatami = (sqm / 1.62).toFixed(1);
-                const tsubo = (sqm * 0.3025).toFixed(1);
-                return { sqm, tatami, tsubo };
-            };
-
-            const gridToMm = (val) => Math.round(val * UNIT_SIZE_MM);
-            const mmToGrid = (mm) => Math.max(1, Math.round(mm / UNIT_SIZE_MM));
-
-            const updateZoom = useCallback(() => {
-                if (!mainRef.current || !canvasRef.current) return;
-                const container = mainRef.current;
-                const base = elements.find(el => el.type === 'base');
-                if (!base) return;
-
-                const targetW = base.w * GRID_PIXELS;
-                const targetH = base.h * GRID_PIXELS;
-                
-                const padding = 80;
-                const scaleX = (container.clientWidth - padding) / targetW;
-                const scaleY = (container.clientHeight - padding) / targetH;
-                
-                setZoom(Math.min(scaleX, scaleY, 2.5)); 
-            }, [elements]);
-
-            useEffect(() => {
-                window.addEventListener('resize', updateZoom);
-                updateZoom();
-                return () => window.removeEventListener('resize', updateZoom);
-            }, [updateZoom]);
-
-            const handleConfirmBase = () => {
-                const baseElement = {
-                    id: 1,
-                    label: '外形',
-                    x: 0, y: 0,
-                    w: baseDraft.w, h: baseDraft.h,
-                    color: 'bg-white border-slate-300 border-4 border-dashed',
-                    type: 'base',
-                    rotation: 0,
-                    isFixed: true,
-                };
-
-                let currentX = 0;
-                let currentY = 0;
-                let maxHeightInRow = 0;
-
-                const initialRooms = ROOM_TYPES.map((type, index) => {
-                    if (currentX + type.defaultW > baseDraft.w) {
-                        currentX = 0;
-                        currentY += maxHeightInRow;
-                        maxHeightInRow = 0;
-                    }
-
-                    const room = {
-                        ...type,
-                        id: Date.now() + index,
-                        x: currentX,
-                        y: currentY,
-                        w: type.defaultW,
-                        h: type.defaultH,
-                        rotation: 0
-                    };
-
-                    currentX += type.defaultW;
-                    maxHeightInRow = Math.max(maxHeightInRow, type.defaultH);
-                    return room;
-                });
-
-                setElements([baseElement, ...initialRooms]);
-                setTimeout(updateZoom, 50);
-            };
-
-            const addElement = (proto, isCustom = false) => {
-                let colorClass = proto.color;
-                if (isCustom && proto.type !== 'label') {
-                    const randomColor = COLOR_PALETTES[Math.floor(Math.random() * COLOR_PALETTES.length)];
-                    colorClass = `${randomColor.bg} ${randomColor.border}`;
-                }
-
-                const newElement = {
-                    id: Date.now(),
-                    label: isCustom ? (proto.type === 'label' ? labelText || 'ラベル' : customName || '新規アイテム') : proto.label,
-                    x: 4, y: 4,
-                    w: proto.defaultW || 8,
-                    h: proto.defaultH || 4,
-                    color: colorClass || 'bg-transparent border-transparent',
-                    type: proto.type,
-                    rotation: 0,
-                    isFixed: proto.type === 'base',
-                };
-
-                setElements(prev => [...prev, newElement]);
-                setSelectedId(newElement.id);
-                if (isCustom) {
-                    setCustomName('');
-                    setLabelText('');
-                }
-            };
-
-            const handleMouseDown = (e, element, action) => {
-                e.stopPropagation();
-                setSelectedId(element.id);
-                const rect = e.currentTarget.getBoundingClientRect();
-                
-                if (action === 'move' && !element.isFixed) {
-                    setIsDragging(true);
-                    setDragOffset({ 
-                        x: (e.clientX - rect.left) / zoom, 
-                        y: (e.clientY - rect.top) / zoom 
-                    });
-                } else if (action === 'resize') {
-                    setIsResizing(true);
-                }
-            };
-
-            const handleMouseMove = useCallback((e) => {
-                if (!isDragging && !isResizing) return;
-                const canvasRect = canvasRef.current.getBoundingClientRect();
-                const rawX = (e.clientX - canvasRect.left) / zoom;
-                const rawY = (e.clientY - canvasRect.top) / zoom;
-
-                setElements(prev => prev.map(el => {
-                    if (el.id !== selectedId) return el;
-                    if (isDragging && !el.isFixed) {
-                        return {
-                            ...el,
-                            x: Math.round((rawX - dragOffset.x) / GRID_PIXELS),
-                            y: Math.round((rawY - dragOffset.y) / GRID_PIXELS),
-                        };
-                    }
-                    if (isResizing) {
-                        return {
-                            ...el,
-                            w: Math.max(1, Math.round((rawX - el.x * GRID_PIXELS) / GRID_PIXELS)),
-                            h: Math.max(1, Math.round((rawY - el.y * GRID_PIXELS) / GRID_PIXELS)),
-                        };
-                    }
-                    return el;
-                }));
-            }, [isDragging, isResizing, selectedId, dragOffset, zoom]);
-
-            const handleMouseUp = () => {
-                setIsDragging(false);
-                setIsResizing(false);
-            };
-
-            useEffect(() => {
-                window.addEventListener('mousemove', handleMouseMove);
-                window.addEventListener('mouseup', handleMouseUp);
-                return () => {
-                    window.removeEventListener('mousemove', handleMouseMove);
-                    window.removeEventListener('mouseup', handleMouseUp);
-                };
-            }, [handleMouseMove]);
-
-            const baseElement = useMemo(() => elements.find(el => el.type === 'base'), [elements]);
-            
-            const stats = useMemo(() => {
-                const baseArea = baseElement ? parseFloat(calculateArea(baseElement.w, baseElement.h).sqm) : 0;
-                const floorArea = elements
-                    .filter(el => el.type === 'room')
-                    .reduce((acc, el) => acc + parseFloat(calculateArea(el.w, el.h).sqm), 0);
-                const coverageRatio = baseArea > 0 ? ((floorArea / baseArea) * 100).toFixed(1) : 0;
-                return { baseArea, floorArea, coverageRatio };
-            }, [elements, baseElement]);
-
-            const sortedElements = [...elements].sort((a, b) => {
-                const order = { 'base': 0, 'room': 1, 'furniture': 2, 'label': 3 };
-                return order[a.type] - order[b.type];
-            });
-
-            return (
-                <div className="flex flex-col h-screen bg-slate-100 overflow-hidden text-slate-800">
-                    <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center z-50 shadow-sm">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Icon name="Home" size={24} /></div>
-                            <div>
-                                <h1 className="text-lg font-bold leading-tight">間取りスケッチャー</h1>
-                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest">{planTitle || 'New Project'} / 250mm Precision</p>
-                            </div>
-                        </div>
-                        {baseDraft && (
-                            <div className="flex items-center gap-6">
-                                <div className="flex gap-6 border-r pr-6 border-slate-200">
-                                    <div className="text-right">
-                                        <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-tighter">外形面積</span>
-                                        <span className="text-xl font-black">{stats.baseArea.toFixed(1)} <small className="text-xs font-normal">㎡</small></span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="block text-[10px] font-bold text-indigo-400 uppercase tracking-tighter">延床面積</span>
-                                        <span className="text-xl font-black text-indigo-600">{stats.floorArea.toFixed(1)} <small className="text-xs font-normal">㎡</small></span>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button 
-                                        onClick={saveCurrentPlan}
-                                        className="flex items-center gap-2 bg-indigo-50 text-indigo-600 border border-indigo-200 px-4 py-2 rounded-xl font-bold hover:bg-indigo-100 transition-all active:scale-95 text-sm"
-                                    >
-                                        <Icon name="Layout" size={18} />
-                                        <span>保存</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => window.print()} 
-                                        className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-xl font-bold shadow-md hover:bg-indigo-600 transition-all active:scale-95 text-sm"
-                                    >
-                                        <Icon name="Download" size={18} />
-                                        <span>印刷 / 保存</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => { if(confirm('全てリセットしますか？')) { setElements([]); setPlanTitle(''); } }} 
-                                        className="p-2 text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl"
-                                    >
-                                        <Icon name="RotateCcw" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </header>
-
-                    <div className="flex flex-1 overflow-hidden">
-                        <aside className="w-80 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-5 space-y-6 scrollbar-hide">
-                            {savedPlans.length > 0 && (
-                                <section className="bg-slate-50 rounded-2xl p-4 border border-slate-200 mb-2">
-                                    <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2 uppercase tracking-wider">保存済みデータ</h3>
-                                    <div className="space-y-2 max-h-40 overflow-y-auto scrollbar-hide">
-                                        {savedPlans.map(plan => (
-                                            <div 
-                                                key={plan.id}
-                                                onClick={() => loadPlan(plan)}
-                                                className="group flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-400 hover:shadow-sm transition-all cursor-pointer"
-                                            >
-                                                <div className="overflow-hidden">
-                                                    <p className="text-xs font-bold text-slate-700 truncate">{plan.name}</p>
-                                                    <p className="text-[9px] text-slate-400">{plan.date}</p>
-                                                </div>
-                                                <button 
-                                                    onClick={(e) => deletePlan(e, plan.id)}
-                                                    className="p-1.5 text-slate-300 hover:text-red-500 transition-colors"
-                                                >
-                                                    <Icon name="Trash2" size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </section>
-                            )}
-
-                            {!baseElement ? (
-                                <section className="space-y-4 pt-4">
-                                    <div className="bg-indigo-50 p-5 rounded-2xl border-2 border-indigo-100 shadow-sm text-center">
-                                        <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white mx-auto mb-4">
-                                            <Icon name="Box" size={24} />
-                                        </div>
-                                        <h3 className="text-sm font-bold text-indigo-900 mb-2">家のサイズを指定</h3>
-                                        <div className="space-y-4 text-left">
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">幅 (mm)</label>
-                                                <input type="number" step="250" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(parseInt(e.target.value) || UNIT_SIZE_MM)})} className="w-full text-sm font-bold bg-white border border-indigo-200 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-indigo-400"/>
-                                            </div>
-                                            <div>
-                                                <label className="text-[10px] font-bold text-slate-400 block mb-1 uppercase">奥行 (mm)</label>
-                                                <input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(parseInt(e.target.value) || UNIT_SIZE_MM)})} className="w-full text-sm font-bold bg-white border border-indigo-200 rounded-xl px-4 py-3 outline-none focus:ring-2 ring-indigo-400"/>
-                                            </div>
-                                            <button onClick={handleConfirmBase} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all">
-                                                確定して配置
-                                            </button>
-                                        </div>
-                                    </div>
-                                </section>
-                            ) : (
-                                <div className="space-y-6 animate-in slide-in-from-left duration-300">
-                                    {selectedId && elements.filter(el => el.id === selectedId).map(el => (
-                                        <section key={el.id} className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 space-y-4 shadow-sm">
-                                            <h3 className="text-xs font-bold text-indigo-900 flex items-center gap-2">編集: {el.label}</h3>
-                                            <input type="text" value={el.label} onChange={(e) => setElements(elements.map(item => item.id === el.id ? {...item, label: e.target.value} : item))} className="w-full text-sm font-bold bg-white rounded-lg px-3 py-2 outline-none shadow-inner"/>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div><label className="text-[10px] font-bold text-indigo-400 block mb-1 uppercase">幅 (mm)</label>
-                                                    <input type="number" step="250" value={gridToMm(el.w)} onChange={(e) => setElements(elements.map(item => item.id === el.id ? {...item, w: mmToGrid(parseInt(e.target.value) || UNIT_SIZE_MM)} : item))} className="w-full text-sm font-bold bg-white rounded-lg px-3 py-2 outline-none"/>
-                                                </div>
-                                                <div><label className="text-[10px] font-bold text-indigo-400 block mb-1 uppercase">奥行 (mm)</label>
-                                                    <input type="number" step="250" value={gridToMm(el.h)} onChange={(e) => setElements(elements.map(item => item.id === el.id ? {...item, h: mmToGrid(parseInt(e.target.value) || UNIT_SIZE_MM)} : item))} className="w-full text-sm font-bold bg-white rounded-lg px-3 py-2 outline-none"/>
-                                                </div>
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button onClick={() => setElements(elements.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item))} className="p-2 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-600 hover:text-white transition-all flex items-center justify-center gap-1 text-[10px] font-bold text-indigo-600"><Icon name="RotateCw" size={14}/> 回転</button>
-                                                {!el.isFixed && <button onClick={() => { setElements(elements.filter(item => item.id !== el.id)); setSelectedId(null); }} className="p-2 bg-white border border-red-100 rounded-lg hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-1 text-[10px] font-bold text-red-500"><Icon name="Trash2" size={14}/> 削除</button>}
-                                            </div>
-                                        </section>
-                                    ))}
-
-                                    <section className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-                                        <h3 className="text-xs font-bold text-slate-500 mb-3 flex items-center gap-2 uppercase tracking-wider"><Icon name="Plus" size={14} /> パーツの追加</h3>
-                                        <input type="text" placeholder="名前" value={customName} onChange={(e) => setCustomName(e.target.value)} className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 mb-2 outline-none focus:ring-2 ring-indigo-300"/>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <button onClick={() => addElement({ type: 'room', defaultW: 8, defaultH: 8 }, true)} className="bg-white border border-slate-200 hover:bg-indigo-50 py-2 rounded-lg text-[10px] font-black transition-all">部屋</button>
-                                            <button onClick={() => addElement({ type: 'furniture', defaultW: 4, defaultH: 4 }, true)} className="bg-white border border-slate-200 hover:bg-indigo-50 py-2 rounded-lg text-[10px] font-black transition-all">家具</button>
-                                        </div>
-                                    </section>
-
-                                    <section>
-                                        <h3 className="text-xs font-bold text-slate-400 mb-3 px-1 uppercase tracking-widest">部屋・家具リスト</h3>
-                                        <div className="grid grid-cols-2 gap-2 pb-10">
-                                            {ROOM_TYPES.map(type => (
-                                                <button key={type.label} onClick={() => addElement(type)} className="flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-300 transition-all group text-center">
-                                                    <div className={`w-full h-8 rounded-md ${type.color.split(' ')[0]} border ${type.color.split(' ')[1]}`} />
-                                                    <span className="text-[10px] font-bold text-slate-600 group-hover:text-indigo-600">{type.label}</span>
-                                                </button>
-                                            ))}
-                                            {FURNITURE_TYPES.map(type => (
-                                                <button key={type.label} onClick={() => addElement(type)} className="flex items-center gap-2 p-2 rounded-xl border border-slate-100 bg-slate-50 hover:border-indigo-300 transition-all text-left group">
-                                                    <Icon name={type.icon} size={14} className="text-slate-400 group-hover:text-indigo-500" />
-                                                    <span className="text-[10px] font-bold text-slate-600 group-hover:text-indigo-600 whitespace-nowrap overflow-hidden text-ellipsis">{type.label}</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </section>
-                                </div>
-                            )}
-                        </aside>
-
-                        <main ref={mainRef} className="flex-1 relative overflow-hidden p-8 bg-slate-200/50 flex items-center justify-center">
-                            {baseElement ? (
-                                <div 
-                                    className="relative flex items-center justify-center transition-transform duration-300 ease-out"
-                                    style={{ transform: `scale(${zoom})` }}
-                                >
-                                    <div 
-                                        ref={canvasRef}
-                                        className="relative bg-white shadow-2xl transition-all duration-500 ease-out"
-                                        style={{ 
-                                            width: baseElement.w * GRID_PIXELS, 
-                                            height: baseElement.h * GRID_PIXELS,
-                                            backgroundImage: `
-                                                linear-gradient(#f1f5f9 1px, transparent 1px), 
-                                                linear-gradient(90deg, #f1f5f9 1px, transparent 1px),
-                                                linear-gradient(#e2e8f0 1px, transparent 1px), 
-                                                linear-gradient(90deg, #e2e8f0 1px, transparent 1px)
-                                            `,
-                                            backgroundSize: `${GRID_PIXELS}px ${GRID_PIXELS}px, ${GRID_PIXELS}px ${GRID_PIXELS}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px`
-                                        }}
-                                        onMouseDown={() => setSelectedId(null)}
-                                    >
-                                        {sortedElements.map(el => {
-                                            const isSelected = selectedId === el.id;
-                                            const { sqm, tatami } = calculateArea(el.w, el.h);
-                                            const layerClass = el.type === 'base' ? 'layer-base' : el.type === 'room' ? 'layer-room' : el.type === 'furniture' ? 'layer-furniture' : 'layer-label';
-                                            
-                                            return (
-                                                <div
-                                                    key={el.id}
-                                                    onMouseDown={(e) => handleMouseDown(e, el, 'move')}
-                                                    className={`absolute flex flex-col items-center justify-center 
-                                                        ${el.color} ${layerClass} 
-                                                        ${isSelected ? 'ring-2 ring-indigo-500 ring-offset-2 shadow-2xl z-40 scale-[1.01]' : ''} 
-                                                        ${el.type === 'furniture' ? 'rounded-md opacity-90' : ''} 
-                                                        ${el.isFixed ? 'cursor-default pointer-events-none' : 'cursor-move'}`}
-                                                    style={{ 
-                                                        left: el.x * GRID_PIXELS, 
-                                                        top: el.y * GRID_PIXELS, 
-                                                        width: el.w * GRID_PIXELS, 
-                                                        height: el.h * GRID_PIXELS, 
-                                                        transform: `rotate(${el.rotation}deg)` 
-                                                    }}
-                                                >
-                                                    <div className="p-1 text-center pointer-events-none select-none overflow-hidden w-full">
-                                                        <span className={`font-black text-slate-800 leading-tight block uppercase truncate 
-                                                            ${el.type === 'base' ? 'text-4xl text-slate-200 opacity-20' : 
-                                                              el.type === 'furniture' ? 'text-[8px]' : 'text-[10px]'}`}>
-                                                            {el.label}
-                                                        </span>
-                                                        {el.type === 'room' && (
-                                                            <span className="text-[8px] font-bold text-slate-500 opacity-60 block truncate">
-                                                                {tatami}J / {sqm}㎡
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    {isSelected && !el.isFixed && (
-                                                        <div className="layer-ui">
-                                                            <div className="absolute -top-3 -right-3 w-6 h-6 bg-white border border-indigo-200 text-indigo-600 rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-600 hover:text-white cursor-pointer" onClick={(e) => { e.stopPropagation(); setElements(elements.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}>
-                                                                <Icon name="RotateCw" size={14} />
-                                                            </div>
-                                                            <div onMouseDown={(e) => handleMouseDown(e, el, 'resize')} className="absolute -bottom-2 -right-2 w-5 h-5 cursor-nwse-resize bg-indigo-600 text-white rounded-full flex items-center justify-center border-2 border-white shadow-md hover:scale-125 transition-transform">
-                                                                <Icon name="Maximize2" size={10} />
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-slate-300">
-                                    <Icon name="Box" size={80} className="mb-4 opacity-20 animate-pulse" />
-                                    <p className="font-bold text-lg text-slate-400">家のサイズを決定して開始</p>
-                                </div>
-                            )}
-                        </main>
-                    </div>
+      <div className="flex flex-1 overflow-hidden relative">
+        <aside className="w-16 sm:w-64 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-2 sm:p-5 space-y-6 scrollbar-hide z-40 shrink-0 shadow-xl">
+          {!baseEl ? (
+            <section className="space-y-4 pt-2 text-center">
+              <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">家の外形サイズ</h3>
+              <div className="space-y-4 text-left">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1">幅 (mm)</label>
+                  <input type="number" step="250" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-lg"/>
                 </div>
-            );
-        };
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 block mb-1">奥行 (mm)</label>
+                  <input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-lg"/>
+                </div>
+                <button onClick={() => addElement({ type: 'base', defaultW: baseDraft.w, defaultH: baseDraft.h, color: 'bg-white border-slate-300 border-2 border-dashed' })} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl hover:bg-indigo-700 active:scale-95 transition-all mt-2 tracking-widest">サイズを確定して配置</button>
+              </div>
+            </section>
+          ) : (
+            <div className="space-y-6">
+              {!selectedId && (
+                <section className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-inner">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><Settings size={14}/> 外寸微調整</h3>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-500">幅 (mm)</label>
+                      <input type="number" step="250" value={gridToMm(baseEl.w)} onChange={(e) => setElements(elements.map(el => el.type === 'base' ? {...el, w: mmToGrid(parseInt(e.target.value))} : el))} className="w-full p-2 text-sm border rounded-lg bg-white font-bold outline-none"/>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-500">奥行 (mm)</label>
+                      <input type="number" step="250" value={gridToMm(baseEl.h)} onChange={(e) => setElements(elements.map(el => el.type === 'base' ? {...el, h: mmToGrid(parseInt(e.target.value))} : el))} className="w-full p-2 text-sm border rounded-lg bg-white font-bold outline-none"/>
+                    </div>
+                  </div>
+                </section>
+              )}
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+              <section>
+                <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">部屋を追加</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {ROOM_DATA.map(r => (
+                    <button key={r.label} onClick={() => addElement(r)} className="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 bg-slate-50 hover:border-indigo-200 active:scale-90 transition-all group shadow-sm">
+                      <div className={`w-full h-4 sm:h-7 rounded-lg ${r.color.split(' ')[0]} border ${r.color.split(' ')[1]}`} />
+                      <span className="text-[9px] font-black text-slate-600 mt-2 truncate w-full text-center group-hover:text-indigo-600">{r.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">家具を追加</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {FURNITURE_DATA.map(f => (
+                    <button key={f.label} onClick={() => addElement(f)} className="flex flex-col items-center p-2.5 rounded-2xl border border-slate-100 bg-slate-50 hover:border-indigo-200 active:scale-90 transition-all group shadow-sm">
+                      <f.icon size={18} className="text-slate-400 group-hover:text-indigo-600" />
+                      <span className="hidden sm:inline text-[9px] font-black text-slate-600 mt-2 group-hover:text-indigo-600">{f.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+        </aside>
+
+        <main ref={mainRef} className="flex-1 bg-slate-200 relative overflow-hidden touch-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onWheel={onWheel}>
+          {baseEl ? (
+            <div ref={canvasRef} className="absolute pointer-events-none transition-transform duration-75 ease-out origin-top-left"
+              style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, width: baseEl.w * GRID_PIXELS, height: baseEl.h * GRID_PIXELS }}
+            >
+              {/* 薄いグリッド背景 (0.5m / 1.0m) */}
+              <div className="absolute inset-0 bg-white shadow-2xl" style={{
+                backgroundImage: `
+                  linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+                  linear-gradient(to bottom, #f1f5f9 1px, transparent 1px),
+                  linear-gradient(to right, #e2e8f0 1.5px, transparent 1.5px),
+                  linear-gradient(to bottom, #e2e8f0 1.5px, transparent 1.5px)
+                `,
+                backgroundSize: `
+                  ${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px,
+                  ${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px,
+                  ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px,
+                  ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px
+                `
+              }} />
+              
+              {sortedElements.map(el => {
+                const isSelected = selectedId === el.id;
+                const { sqm, tatami, mWidth, mHeight } = calculateArea(el.w, el.h);
+                const isBase = el.type === 'base';
+
+                return (
+                  <div key={el.id} data-id={el.id} className={`absolute flex flex-col items-center justify-center border-2 transition-all
+                      ${el.color} ${isBase ? 'pointer-events-none border-dashed border-slate-200 opacity-40' : 'pointer-events-auto cursor-move border-opacity-50'}
+                      ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-4 z-40 shadow-2xl scale-[1.01]' : 'z-10 shadow-sm'}
+                      ${el.type === 'furniture' ? 'rounded-2xl opacity-90' : 'rounded-sm'}`}
+                    style={{ left: el.x * GRID_PIXELS, top: el.y * GRID_PIXELS, width: el.w * GRID_PIXELS, height: el.h * GRID_PIXELS, transform: `rotate(${el.rotation}deg)` }}
+                  >
+                    <div className="text-center p-1 pointer-events-none w-full overflow-hidden">
+                      <span className={`font-black text-slate-800 leading-none block ${isBase ? 'text-7xl text-slate-100 mt-28 opacity-10' : 'text-[11px]'}`}>
+                        {el.label}
+                      </span>
+                      {!isBase && el.type === 'room' && (
+                        <div className="mt-1 space-y-0.5">
+                          <span className="text-[9px] text-slate-500 block font-black uppercase tracking-tighter leading-none">{tatami}畳 / {sqm}㎡</span>
+                          <span className="text-[8px] text-indigo-400 block font-black leading-none">{mWidth}m × {mHeight}m</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {isSelected && !isBase && (
+                      <div className="pointer-events-auto">
+                        <div className="absolute -top-7 -right-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-indigo-600 active:scale-75 transition-transform"
+                          onClick={(e) => { e.stopPropagation(); setElements(prev => prev.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}
+                        >
+                          <RotateCw size={24} />
+                        </div>
+                        {el.type === 'room' && (
+                          <div className="absolute -bottom-8 -right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white cursor-nwse-resize z-50 active:scale-90 transition-transform touch-none" data-action="resize">
+                            <Maximize2 size={32} />
+                          </div>
+                        )}
+                        <div className="absolute -top-7 -left-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-red-500 active:scale-75 transition-transform"
+                          onClick={(e) => { e.stopPropagation(); setElements(prev => prev.filter(item => item.id !== el.id)); setSelectedId(null); }}
+                        >
+                          <Trash2 size={24} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-slate-300">
+              <Home size={100} className="mb-4 opacity-5" />
+              <p className="font-black text-sm uppercase tracking-widest text-slate-400">家の外形を入力して開始</p>
+            </div>
+          )}
+
+          <div className="absolute bottom-10 right-10 flex flex-col gap-5 z-50 no-print">
+            <button onClick={resetView} className="w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center text-indigo-600 active:bg-indigo-50 border border-slate-100 transition-all hover:scale-110 active:scale-90">
+              <Search size={32} />
+            </button>
+            <div className="bg-white rounded-[2.5rem] shadow-2xl flex flex-col border border-slate-100 overflow-hidden">
+              <button onClick={() => setView(v => ({...v, scale: Math.min(v.scale * 1.2, 4)}))} className="w-16 h-16 flex items-center justify-center font-black text-2xl active:bg-slate-50 border-b-2 border-slate-50">+</button>
+              <button onClick={() => setView(v => ({...v, scale: Math.max(v.scale * 0.8, 0.2)}))} className="w-16 h-16 flex items-center justify-center font-black text-2xl active:bg-slate-50">-</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
