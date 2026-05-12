@@ -9,6 +9,7 @@ import {
 const UNIT_SIZE_MM = 250;
 const GRID_PIXELS = 15;   
 const SCALE_FACTOR = 0.25; // 1ユニット = 0.25m
+const WORLD_SIZE = 10000; // ワークスペースの仮想サイズ (px)
 
 // 厳密なデフォルトサイズ定義 (mm / 250 = units)
 const ROOM_DATA = [
@@ -42,7 +43,6 @@ export default function App() {
   const [savedPlans, setSavedPlans] = useState([]);
 
   const mainRef = useRef(null);
-  const canvasRef = useRef(null);
   const interactionRef = useRef({ 
     startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0
   });
@@ -59,7 +59,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem('madori_v8_final');
+    const stored = localStorage.getItem('madori_v8_expanded');
     if (stored) setSavedPlans(JSON.parse(stored));
   }, []);
 
@@ -69,7 +69,7 @@ export default function App() {
     const newPlan = { id: Date.now(), name, elements, timestamp: new Date().toISOString() };
     const updated = [newPlan, ...savedPlans];
     setSavedPlans(updated);
-    localStorage.setItem('madori_v8_final', JSON.stringify(updated));
+    localStorage.setItem('madori_v8_expanded', JSON.stringify(updated));
   };
 
   const resetView = useCallback(() => {
@@ -81,7 +81,7 @@ export default function App() {
     const availH = mainRef.current.clientHeight - padding;
     const contentW = base.w * GRID_PIXELS;
     const contentH = base.h * GRID_PIXELS;
-    const newScale = Math.min(availW / contentW, availH / contentH, 1.4);
+    const newScale = Math.min(availW / contentW, availH / contentH, 1.2);
     setView({
       x: (mainRef.current.clientWidth - contentW * newScale) / 2,
       y: (mainRef.current.clientHeight - contentH * newScale) / 2,
@@ -105,14 +105,12 @@ export default function App() {
     };
 
     if (proto.type === 'base') {
-      // 11m x 7m (44x28) 内への初期配置
       const initialRooms = ROOM_DATA.map((r, i) => {
-        // 重なりを最小化するための座標セット
         const coords = [
-          {x: 0, y: 0},   {x: 20, y: 0},  {x: 32, y: 0},  // リビング, ダイニング, キッチン
-          {x: 0, y: 14},  {x: 12, y: 14}, {x: 20, y: 14}, // 玄関, Wspace, 風呂
-          {x: 28, y: 14}, {x: 36, y: 14}, {x: 20, y: 22}, // トイレ, 洗面, ランドリー
-          {x: 32, y: 20}, {x: 0, y: 24}                  // WIC, 階段
+          {x: 0, y: 0},   {x: 20, y: 0},  {x: 32, y: 0},
+          {x: 0, y: 14},  {x: 12, y: 14}, {x: 20, y: 14},
+          {x: 28, y: 14}, {x: 36, y: 14}, {x: 20, y: 22},
+          {x: 32, y: 20}, {x: 0, y: 24}
         ];
         return {
           ...r,
@@ -213,7 +211,7 @@ export default function App() {
           <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><Home size={22} /></div>
           <div>
             <h1 className="text-lg font-bold leading-tight">間取りスケッチャー</h1>
-            <p className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">0.25m Precision Grid</p>
+            <p className="text-[10px] text-indigo-500 font-black uppercase tracking-tighter">Extended Grid Canvas</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -240,7 +238,7 @@ export default function App() {
                   <label className="text-[9px] font-black text-slate-400 block mb-1">奥行 (mm)</label>
                   <input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(parseInt(e.target.value))})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-lg"/>
                 </div>
-                <button onClick={() => addElement({ type: 'base', defaultW: baseDraft.w, defaultH: baseDraft.h, color: 'bg-white border-slate-300 border-2 border-dashed' })} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl hover:bg-indigo-700 active:scale-95 transition-all mt-2 tracking-widest">サイズを確定して配置</button>
+                <button onClick={() => addElement({ type: 'base', defaultW: baseDraft.w, defaultH: baseDraft.h, color: 'bg-white/90 border-slate-300 border-2 border-dashed' })} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl hover:bg-indigo-700 active:scale-95 transition-all mt-2 tracking-widest">サイズを確定して配置</button>
               </div>
             </section>
           ) : (
@@ -260,7 +258,6 @@ export default function App() {
                   </div>
                 </section>
               )}
-
               <section>
                 <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">部屋を追加</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -272,7 +269,6 @@ export default function App() {
                   ))}
                 </div>
               </section>
-
               <section>
                 <h3 className="hidden sm:block text-[10px] font-black text-slate-400 mb-4 uppercase tracking-widest">家具を追加</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -289,12 +285,14 @@ export default function App() {
         </aside>
 
         <main ref={mainRef} className="flex-1 bg-slate-200 relative overflow-hidden touch-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onWheel={onWheel}>
-          {baseEl ? (
-            <div ref={canvasRef} className="absolute pointer-events-none transition-transform duration-75 ease-out origin-top-left"
-              style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, width: baseEl.w * GRID_PIXELS, height: baseEl.h * GRID_PIXELS }}
-            >
-              {/* 薄いグリッド背景 (0.5m / 1.0m) */}
-              <div className="absolute inset-0 bg-white shadow-2xl" style={{
+          <div className="absolute pointer-events-none transition-transform duration-75 ease-out origin-top-left"
+            style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}
+          >
+            {/* 広域グリッド背景 (家の外側にも表示) */}
+            <div className="absolute bg-white shadow-inner" 
+              style={{ 
+                left: -WORLD_SIZE/2, top: -WORLD_SIZE/2, 
+                width: WORLD_SIZE, height: WORLD_SIZE,
                 backgroundImage: `
                   linear-gradient(to right, #f1f5f9 1px, transparent 1px),
                   linear-gradient(to bottom, #f1f5f9 1px, transparent 1px),
@@ -307,61 +305,56 @@ export default function App() {
                   ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px,
                   ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px
                 `
-              }} />
-              
-              {sortedElements.map(el => {
-                const isSelected = selectedId === el.id;
-                const { sqm, tatami, mWidth, mHeight } = calculateArea(el.w, el.h);
-                const isBase = el.type === 'base';
+              }} 
+            />
+            
+            {sortedElements.map(el => {
+              const isSelected = selectedId === el.id;
+              const { sqm, tatami, mWidth, mHeight } = calculateArea(el.w, el.h);
+              const isBase = el.type === 'base';
 
-                return (
-                  <div key={el.id} data-id={el.id} className={`absolute flex flex-col items-center justify-center border-2 transition-all
-                      ${el.color} ${isBase ? 'pointer-events-none border-dashed border-slate-200 opacity-40' : 'pointer-events-auto cursor-move border-opacity-50'}
-                      ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-4 z-40 shadow-2xl scale-[1.01]' : 'z-10 shadow-sm'}
-                      ${el.type === 'furniture' ? 'rounded-2xl opacity-90' : 'rounded-sm'}`}
-                    style={{ left: el.x * GRID_PIXELS, top: el.y * GRID_PIXELS, width: el.w * GRID_PIXELS, height: el.h * GRID_PIXELS, transform: `rotate(${el.rotation}deg)` }}
-                  >
-                    <div className="text-center p-1 pointer-events-none w-full overflow-hidden">
-                      <span className={`font-black text-slate-800 leading-none block ${isBase ? 'text-7xl text-slate-100 mt-28 opacity-10' : 'text-[11px]'}`}>
-                        {el.label}
-                      </span>
-                      {!isBase && el.type === 'room' && (
-                        <div className="mt-1 space-y-0.5">
-                          <span className="text-[9px] text-slate-500 block font-black uppercase tracking-tighter leading-none">{tatami}畳 / {sqm}㎡</span>
-                          <span className="text-[8px] text-indigo-400 block font-black leading-none">{mWidth}m × {mHeight}m</span>
-                        </div>
-                      )}
-                    </div>
-
-                    {isSelected && !isBase && (
-                      <div className="pointer-events-auto">
-                        <div className="absolute -top-7 -right-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-indigo-600 active:scale-75 transition-transform"
-                          onClick={(e) => { e.stopPropagation(); setElements(prev => prev.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}
-                        >
-                          <RotateCw size={24} />
-                        </div>
-                        {el.type === 'room' && (
-                          <div className="absolute -bottom-8 -right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white cursor-nwse-resize z-50 active:scale-90 transition-transform touch-none" data-action="resize">
-                            <Maximize2 size={32} />
-                          </div>
-                        )}
-                        <div className="absolute -top-7 -left-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-red-500 active:scale-75 transition-transform"
-                          onClick={(e) => { e.stopPropagation(); setElements(prev => prev.filter(item => item.id !== el.id)); setSelectedId(null); }}
-                        >
-                          <Trash2 size={24} />
-                        </div>
+              return (
+                <div key={el.id} data-id={el.id} className={`absolute flex flex-col items-center justify-center border-2 transition-all
+                    ${el.color} ${isBase ? 'pointer-events-none border-dashed border-slate-300 opacity-80' : 'pointer-events-auto cursor-move border-opacity-50'}
+                    ${isSelected ? 'ring-4 ring-indigo-500 ring-offset-4 z-40 shadow-2xl scale-[1.01]' : 'z-10 shadow-sm'}
+                    ${el.type === 'furniture' ? 'rounded-2xl opacity-90' : 'rounded-sm'}`}
+                  style={{ left: el.x * GRID_PIXELS, top: el.y * GRID_PIXELS, width: el.w * GRID_PIXELS, height: el.h * GRID_PIXELS, transform: `rotate(${el.rotation}deg)` }}
+                >
+                  <div className="text-center p-1 pointer-events-none w-full overflow-hidden">
+                    <span className={`font-black text-slate-800 leading-none block ${isBase ? 'text-7xl text-slate-100 mt-28 opacity-10' : 'text-[11px]'}`}>
+                      {el.label}
+                    </span>
+                    {!isBase && el.type === 'room' && (
+                      <div className="mt-1 space-y-0.5">
+                        <span className="text-[9px] text-slate-500 block font-black uppercase tracking-tighter leading-none">{tatami}畳 / {sqm}㎡</span>
+                        <span className="text-[8px] text-indigo-400 block font-black leading-none">{mWidth}m × {mHeight}m</span>
                       </div>
                     )}
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-slate-300">
-              <Home size={100} className="mb-4 opacity-5" />
-              <p className="font-black text-sm uppercase tracking-widest text-slate-400">家の外形を入力して開始</p>
-            </div>
-          )}
+
+                  {isSelected && !isBase && (
+                    <div className="pointer-events-auto">
+                      <div className="absolute -top-7 -right-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-indigo-600 active:scale-75 transition-transform"
+                        onClick={(e) => { e.stopPropagation(); setElements(prev => prev.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}
+                      >
+                        <RotateCw size={24} />
+                      </div>
+                      {el.type === 'room' && (
+                        <div className="absolute -bottom-8 -right-8 w-16 h-16 bg-indigo-600 text-white rounded-full flex items-center justify-center shadow-2xl border-4 border-white cursor-nwse-resize z-50 active:scale-90 transition-transform touch-none" data-action="resize">
+                          <Maximize2 size={32} />
+                        </div>
+                      )}
+                      <div className="absolute -top-7 -left-7 w-14 h-14 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-red-500 active:scale-75 transition-transform"
+                        onClick={(e) => { e.stopPropagation(); setElements(prev => prev.filter(item => item.id !== el.id)); setSelectedId(null); }}
+                      >
+                        <Trash2 size={24} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
           <div className="absolute bottom-10 right-10 flex flex-col gap-5 z-50 no-print">
             <button onClick={resetView} className="w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center text-indigo-600 active:bg-indigo-50 border border-slate-100 transition-all hover:scale-110 active:scale-90">
