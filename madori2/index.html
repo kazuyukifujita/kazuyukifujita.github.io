@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>間取りスケッチャー | 共有ギャラリー統合版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; touch-action: none; overscroll-behavior: none; margin: 0; background-color: #f1f5f9; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .modal-overlay { background-color: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px); }
+        .plan-card:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="text-slate-900 overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+        // --- 定数 ---
+        const UNIT_SIZE_MM = 250;
+        const GRID_PIXELS = 15;   
+        const SCALE_FACTOR = 0.25; 
+
+        // --- ユーティリティ関数 ---
+        const mmToGrid = (mm) => Math.max(1, Math.round((Number(mm) || 0) / UNIT_SIZE_MM));
+        const gridToMm = (grid) => (Number(grid) || 0) * UNIT_SIZE_MM;
+
+        // --- システムプリセットデータ ---
+        const SYSTEM_DEFAULT_PLAN = {
+            "id": "system_default",
+            "name": "標準レイアウト（プリセット）",
+            "isSystem": true,
+            "timestamp": "2026-05-12T14:24:58.483Z",
+            "baseDraft": {"w": 44, "h": 28},
+            "elements": [
+                {"id": 1778592482286, "label": "家の外形", "x": 0, "y": 0, "w": 44, "h": 28, "color": "bg-white/50 border-slate-300 border-2 border-dashed", "type": "base", "rotation": 0, "isFixed": true},
+                {"label": "リビング", "defaultW": 20, "defaultH": 14, "color": "bg-orange-100 border-orange-300", "type": "room", "id": 1778592482287, "x": 12, "y": 15, "w": 19, "h": 13, "rotation": 0},
+                {"label": "ダイニング", "defaultW": 12, "defaultH": 12, "color": "bg-amber-50 border-amber-300", "type": "room", "id": 1778592482288, "x": 31, "y": 14, "w": 13, "h": 14, "rotation": 0},
+                {"label": "キッチン", "defaultW": 12, "defaultH": 8, "color": "bg-yellow-50 border-yellow-200", "type": "room", "id": 1778592482289, "x": 29, "y": 0, "w": 15, "h": 14, "rotation": 0},
+                {"label": "玄関", "defaultW": 12, "defaultH": 12, "color": "bg-stone-100 border-stone-400", "type": "room", "id": 1778592482290, "x": 0, "y": 18, "w": 12, "h": 12, "rotation": 0},
+                {"label": "ワークスペース", "defaultW": 8, "defaultH": 8, "color": "bg-indigo-100 border-indigo-200", "type": "room", "id": 1778592482291, "x": 18, "y": 8, "w": 13, "h": 7, "rotation": 0},
+                {"label": "風呂", "defaultW": 8, "defaultH": 8, "color": "bg-cyan-50 border-cyan-300", "type": "room", "id": 1778592482292, "x": 0, "y": 0, "w": 8, "h": 8, "rotation": 0},
+                {"label": "トイレ", "defaultW": 8, "defaultH": 4, "color": "bg-slate-50 border-slate-300", "type": "room", "id": 1778592482293, "x": 0, "y": 8, "w": 8, "h": 4, "rotation": 0},
+                {"label": "洗面", "defaultW": 8, "defaultH": 6, "color": "bg-blue-50 border-blue-200", "type": "room", "id": 1778592482294, "x": 12, "y": 8, "w": 6, "h": 7, "rotation": 0},
+                {"label": "ランドリー", "defaultW": 8, "defaultH": 8, "color": "bg-emerald-50 border-emerald-200", "type": "room", "id": 1778592482295, "x": 8, "y": 0, "w": 9, "h": 8, "rotation": 0},
+                {"label": "WIC", "defaultW": 12, "defaultH": 8, "color": "bg-stone-200 border-stone-300", "type": "room", "id": 1778592482296, "x": 17, "y": 0, "w": 12, "h": 8, "rotation": 0},
+                {"label": "階段", "defaultW": 8, "defaultH": 4, "color": "bg-zinc-50 border-zinc-300", "type": "room", "id": 1778592482297, "x": 0, "y": 12, "w": 8, "h": 6, "rotation": 0},
+                {"id": 1778593211134, "label": "キッチン設備", "x": 34, "y": 8, "w": 10, "h": 4, "color": "bg-emerald-200 border-emerald-400", "type": "furniture", "rotation": 0, "isFixed": false},
+                {"id": 1778593248966, "label": "食卓", "x": 36, "y": 17, "w": 3, "h": 6, "color": "bg-amber-200 border-amber-400", "type": "furniture", "rotation": 0, "isFixed": false},
+                {"id": 1778593254533, "label": "ソファー", "x": 25, "y": 18, "w": 9, "h": 4, "color": "bg-indigo-200 border-indigo-400", "type": "furniture", "rotation": 90, "isFixed": false},
+                {"id": 1778593270215, "label": "テレビ台", "x": 15, "y": 19, "w": 8, "h": 2, "color": "bg-zinc-300 border-zinc-500", "type": "furniture", "rotation": 90, "isFixed": false},
+                {"id": 1778593373215, "label": "カップボード", "x": 37, "y": 0, "w": 7, "h": 2, "color": "bg-orange-200 border-orange-400", "type": "furniture", "rotation": 0, "isFixed": false},
+                {"id": 1778593476722, "label": "カウンター", "x": 28, "y": 8, "w": 7, "h": 3, "color": "bg-lime-100 border-lime-400", "type": "furniture", "rotation": 90, "isFixed": false},
+                {"id": 1778593575325, "label": "食器棚", "x": 32, "y": 0, "w": 5, "h": 2, "color": "bg-pink-100 border-pink-400", "type": "furniture", "rotation": 0, "isFixed": false},
+                {"id": 1778593705328, "label": "冷", "x": 28, "y": 5, "w": 3, "h": 3, "color": "bg-sky-100 border-sky-400", "type": "furniture", "rotation": 270, "isFixed": false},
+                {"id": 1778593728274, "label": "パントリー", "x": 29, "y": 0, "w": 3, "h": 2, "color": "bg-rose-100 border-rose-400", "type": "furniture", "rotation": 0, "isFixed": false},
+                {"id": 1778594101787, "label": "収納", "x": 0, "y": 16, "w": 5, "h": 2, "color": "bg-pink-100 border-pink-400", "type": "furniture", "rotation": 0, "isFixed": false},
+                {"id": 1778594142457, "label": "カウンター", "x": 38, "y": 26, "w": 6, "h": 2, "color": "bg-lime-100 border-lime-400", "type": "furniture", "rotation": 180, "isFixed": false},
+                {"id": 1778594397009, "label": "収納", "x": 12, "y": 23, "w": 5, "h": 3, "color": "bg-sky-100 border-sky-400", "type": "furniture", "rotation": 270, "isFixed": false},
+                {"id": 1778594464752, "label": "収納", "x": 12, "y": 18, "w": 5, "h": 3, "color": "bg-purple-100 border-purple-400", "type": "furniture", "rotation": 90, "isFixed": false},
+                {"id": 1778594897003, "label": "本棚", "x": 18, "y": 8, "w": 7, "h": 2, "color": "bg-purple-100 border-purple-400", "type": "furniture", "rotation": 270, "isFixed": false},
+                {"id": 1778595009653, "label": "ベンチ", "x": 42, "y": 17, "w": 6, "h": 2, "color": "bg-rose-100 border-rose-400", "type": "furniture", "rotation": 90, "isFixed": false}
+            ]
+        };
+
+        const ROOM_DATA = [ 
+            { label: 'リビング', defaultW: 20, defaultH: 14, color: 'bg-orange-100 border-orange-300', type: 'room' }, 
+            { label: 'ダイニング', defaultW: 12, defaultH: 12, color: 'bg-amber-50 border-amber-300', type: 'room' }, 
+            { label: 'キッチン', defaultW: 12, defaultH: 8, color: 'bg-yellow-50 border-yellow-200', type: 'room' }, 
+            { label: '玄関', defaultW: 12, defaultH: 12, color: 'bg-stone-100 border-stone-400', type: 'room' }, 
+            { label: '浴室', defaultW: 8, defaultH: 8, color: 'bg-cyan-50 border-cyan-300', type: 'room' }, 
+            { label: 'トイレ', defaultW: 8, defaultH: 4, color: 'bg-slate-50 border-slate-300', type: 'room' } 
+        ];
+
+        const SvgIcon = ({ name, size = 18, className = "" }) => {
+            const paths = {
+                Home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+                Save: <><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>,
+                Download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+                Upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
+                Rotate: <><path d="M21 12a9 9 0 1 1-9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></>,
+                Trash: <><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></>,
+                Resize: <><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>,
+                Plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+                Globe: <><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></>,
+                Search: <><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>,
+                FileText: <><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>,
+                Clipboard: <><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></>,
+                Settings: <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></>
+            };
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {paths[name] || <circle cx="12" cy="12" r="10" />}
+                </svg>
+            );
+        };
+
+        const App = () => {
+            const [elements, setElements] = useState([]);
+            const [selectedId, setSelectedId] = useState(null);
+            const [baseDraft, setBaseDraft] = useState({ w: 44, h: 28 });
+            const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+            const [interactionMode, setInteractionMode] = useState(null);
+            const [showOpenModal, setShowOpenOptions] = useState(false);
+            const [publicPlans, setPublicPlans] = useState([]);
+            const [isSaving, setIsSaving] = useState(false);
+            const fileInputRef = useRef(null);
+
+            const mainRef = useRef(null);
+            const canvasRef = useRef(null);
+            const interactionRef = useRef({ 
+                startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0, startDist: 0, initialScale: 1
+            });
+
+            // --- 共有データの取得 (堅牢性を向上) ---
+            const fetchPublicPlans = async () => {
+                // プレビュー環境(blob等)では相対 fetch が失敗するためガード
+                if (window.location.protocol.startsWith('blob') || window.location.protocol === 'file:') {
+                    setPublicPlans([SYSTEM_DEFAULT_PLAN]);
+                    return;
+                }
+
+                try {
+                    // パスを確実に解釈させるため ./ を明示
+                    const res = await fetch('./plans.json?cb=' + Date.now());
+                    if (res.ok) {
+                        const data = await res.json();
+                        setPublicPlans([SYSTEM_DEFAULT_PLAN, ...(Array.isArray(data) ? data : [])]);
+                    } else {
+                        setPublicPlans([SYSTEM_DEFAULT_PLAN]);
+                    }
+                } catch (e) {
+                    setPublicPlans([SYSTEM_DEFAULT_PLAN]);
+                    console.log("サーバーデータの取得をスキップしました(設置前またはローカル実行)");
+                }
+            };
+
+            const saveToPublic = async () => {
+                if (elements.length === 0) return;
+                const name = window.prompt("共有ギャラリーに保存する名前を入力してください", `共有案 ${new Date().toLocaleTimeString()}`);
+                if (!name) return;
+
+                setIsSaving(true);
+                try {
+                    const newPlan = { id: Date.now(), name, elements, baseDraft, timestamp: new Date().toISOString() };
+                    const res = await fetch('./save_plan.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newPlan)
+                    });
+                    
+                    if (res.ok) {
+                        alert("共有ギャラリーに保存しました！");
+                        fetchPublicPlans();
+                    } else {
+                        alert("保存に失敗しました。PHPの設定とplans.jsonの書込権限を確認してください。");
+                    }
+                } catch (e) {
+                    alert("サーバーエラーが発生しました。");
+                } finally {
+                    setIsSaving(false);
+                }
+            };
+
+            const loadProjectData = (parsed) => {
+                if (parsed && parsed.elements) {
+                    setElements(parsed.elements);
+                    if (parsed.baseDraft) setBaseDraft(parsed.baseDraft);
+                    setSelectedId(null);
+                    setShowOpenOptions(false);
+                    setTimeout(resetView, 100);
+                }
+            };
+
+            const handleFileImport = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        loadProjectData(parsed);
+                    } catch (err) {
+                        alert("有効なプロジェクトファイルではありません。");
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = ""; 
+            };
+
+            const resetView = useCallback(() => {
+                if (!mainRef.current) return;
+                const base = elements.find(e => e.type === 'base');
+                if (!base) return;
+                const padding = 100;
+                const contentW = (Number(base.w) || 1) * GRID_PIXELS;
+                const contentH = (Number(base.h) || 1) * GRID_PIXELS;
+                const newScale = Math.min((mainRef.current.clientWidth - padding) / contentW, (mainRef.current.clientHeight - padding) / contentH, 1.2);
+                setView({ x: (mainRef.current.clientWidth - contentW * newScale) / 2, y: (mainRef.current.clientHeight - contentH * newScale) / 2, scale: newScale });
+            }, [elements]);
+
+            const onPointerDown = (e) => {
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+                const target = e.target.closest('[data-id]');
+                const action = e.target.closest('[data-action]')?.dataset.action;
+                if (target) {
+                    const id = parseInt(target.dataset.id);
+                    const el = elements.find(item => item.id === id);
+                    if (!el || el.type === 'base') {
+                        setSelectedId(null); setInteractionMode('pan');
+                        interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialViewX: view.x, initialViewY: view.y };
+                        return;
+                    }
+                    setSelectedId(id);
+                    if (action === 'resize') { setInteractionMode('resize'); interactionRef.current = { startX: clientX, startY: clientY, initialW: Number(el.w), initialH: Number(el.h) }; }
+                    else { setInteractionMode('move'); interactionRef.current = { startX: clientX, startY: clientY, initialX: Number(el.x), initialY: Number(el.y) }; }
+                } else {
+                    setSelectedId(null); setInteractionMode('pan');
+                    interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialViewX: view.x, initialViewY: view.y };
+                }
+                e.target.setPointerCapture(e.pointerId);
+            };
+
+            const onPointerMove = useCallback((e) => {
+                if (!interactionMode) return;
+                const clientX = e.clientX;
+                const clientY = e.clientY;
+                if (interactionMode === 'pan') { setView(v => ({ ...v, x: interactionRef.current.initialViewX + (clientX - interactionRef.current.startX), y: interactionRef.current.initialViewY + (clientY - interactionRef.current.startY) })); }
+                else if (interactionMode === 'move' || interactionMode === 'resize') {
+                    const dx = (clientX - interactionRef.current.startX) / (view.scale * GRID_PIXELS);
+                    const dy = (clientY - interactionRef.current.startY) / (view.scale * GRID_PIXELS);
+                    setElements(prev => prev.map(el => {
+                        if (el.id !== selectedId) return el;
+                        if (interactionMode === 'move') return { ...el, x: Math.round(interactionRef.current.initialX + dx), y: Math.round(interactionRef.current.initialY + dy) };
+                        return { ...el, w: Math.max(1, Math.round(interactionRef.current.initialW + dx)), h: Math.max(1, Math.round(interactionRef.current.initialH + dy)) };
+                    }));
+                }
+            }, [interactionMode, selectedId, view.scale]);
+
+            const getElementStyle = (el) => {
+                const x = (Number(el.x) || 0) * GRID_PIXELS;
+                const y = (Number(el.y) || 0) * GRID_PIXELS;
+                let transform = `rotate(${el.rotation}deg)`;
+                if (el.rotation === 90) transform += ` translateY(-100%)`;
+                else if (el.rotation === 180) transform += ` translate(-100%, -100%)`;
+                else if (el.rotation === 270) transform += ` translateX(-100%)`;
+                return { left: x, top: y, width: (Number(el.w) || 1) * GRID_PIXELS, height: (Number(el.h) || 1) * GRID_PIXELS, transform: transform, transformOrigin: 'top left' };
+            };
+
+            useEffect(() => { fetchPublicPlans(); }, []);
+
+            const selectedEl = elements.find(e => e.id === selectedId);
+            const baseEl = elements.find(e => e.type === 'base');
+
+            return (
+                <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans select-none text-slate-900">
+                    <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center z-50 shrink-0 shadow-sm">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><SvgIcon name="Home" size={22} /></div>
+                            <h1 className="text-lg font-bold tracking-tight">間取りスケッチャー 共有</h1>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => { fetchPublicPlans(); setShowOpenOptions(true); }} className="bg-white border border-slate-200 px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-sm hover:bg-slate-50 transition-colors">
+                                <SvgIcon name="Upload" size={16}/><span>プランを開く</span>
+                            </button>
+                            <button onClick={saveToPublic} disabled={isSaving} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 text-xs font-bold shadow-lg hover:bg-emerald-700 disabled:opacity-50 transition-all">
+                                <SvgIcon name="Globe" size={16}/><span>{isSaving ? '保存中...' : '共有ギャラリーへ保存'}</span>
+                            </button>
+                        </div>
+                    </header>
+
+                    {showOpenModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 modal-overlay" onClick={() => setShowOpenOptions(false)}>
+                            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                                    <h2 className="text-xl font-black text-slate-800 flex items-center gap-2"><SvgIcon name="Globe" className="text-indigo-600" /> 共有ギャラリー</h2>
+                                    <button onClick={() => setShowOpenOptions(false)} className="text-slate-400 hover:bg-slate-100 p-2 rounded-full transition-colors"><SvgIcon name="Plus" size={24} className="rotate-45" /></button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                                    <section>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {publicPlans.map((plan, idx) => (
+                                                <button key={plan.id || idx} onClick={() => loadProjectData(plan)} className={`plan-card relative text-left p-5 border-2 rounded-3xl transition-all flex flex-col justify-between min-h-[110px] ${plan.isSystem ? 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100' : 'border-slate-50 bg-slate-50 hover:border-indigo-200 hover:bg-indigo-50'}`}>
+                                                    <div>
+                                                        <div className="flex justify-between items-start">
+                                                            <p className="font-black text-slate-800 leading-tight pr-4">{plan.name}</p>
+                                                            {plan.isSystem && <span className="bg-emerald-600 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">System</span>}
+                                                        </div>
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-2 tracking-wide">
+                                                            {plan.isSystem ? '公式プリセット' : `更新: ${new Date(plan.timestamp).toLocaleString()}`}
+                                                        </p>
+                                                    </div>
+                                                    <div className="mt-4 self-end">
+                                                        <div className="bg-white/80 p-1.5 rounded-lg shadow-sm border border-slate-100">
+                                                            <SvgIcon name="Clipboard" size={14} className={plan.isSystem ? 'text-emerald-500' : 'text-indigo-400'} />
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    <div className="pt-4 border-t border-slate-100">
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">ローカルファイルを読み込む</h3>
+                                        <button onClick={() => { fileInputRef.current.click(); }} className="w-full flex items-center justify-center gap-3 p-4 border border-indigo-100 bg-indigo-50/30 text-indigo-700 rounded-2xl hover:bg-indigo-50 transition-all font-bold text-sm">
+                                            <SvgIcon name="FileText" size={18} />
+                                            <span>PCのJSONファイルを選択</span>
+                                        </button>
+                                    </div>
+                                    <input type="file" ref={fileInputRef} onChange={handleFileImport} accept=".json" className="hidden" />
+                                </div>
+                                <div className="px-6 py-4 bg-slate-50 text-[10px] text-slate-400 font-bold text-center border-t border-slate-100">
+                                    ※プランを読み込むと、現在編集中のデータは上書きされます。
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex flex-1 overflow-hidden relative">
+                        <aside className="w-16 sm:w-64 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-2 sm:p-5 space-y-6 scrollbar-hide z-40 shrink-0 shadow-xl">
+                            {!baseEl ? (
+                                <div className="space-y-4 pt-2">
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">家のサイズを決定</h3>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">幅 (mm)</label>
+                                            <input type="number" step="250" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl font-bold text-lg outline-none focus:ring-2 ring-indigo-100 bg-slate-50"/>
+                                        </div>
+                                        <div>
+                                            <label className="text-[9px] font-black text-slate-400 uppercase ml-1">奥行 (mm)</label>
+                                            <input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl font-bold text-lg outline-none focus:ring-2 ring-indigo-100 bg-slate-50"/>
+                                        </div>
+                                        <button onClick={() => setElements([{ id: Date.now(), label: '家の外形', x: 0, y: 0, w: baseDraft.w, h: baseDraft.h, color: 'bg-white/50 border-slate-300 border-2 border-dashed', type: 'base', rotation: 0, isFixed: true }])} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">サイズを確定</button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-inner">
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><SvgIcon name="Settings" size={14}/> {selectedId && selectedEl.type !== 'base' ? 'パーツ微調整' : '家の外寸微調整'}</h3>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            <div>
+                                                <label className="text-[8px] font-bold text-slate-400 uppercase">幅(mm)</label>
+                                                <input type="number" step="250" value={selectedId ? gridToMm(selectedEl.w) : gridToMm(baseEl.w)} onChange={(e) => {
+                                                    const mm = parseInt(e.target.value) || 250;
+                                                    const targetId = selectedId || baseEl.id;
+                                                    setElements(prev => prev.map(el => el.id === targetId ? {...el, w: mmToGrid(mm)} : el));
+                                                }} className="w-full p-2 text-sm border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
+                                            </div>
+                                            <div>
+                                                <label className="text-[8px] font-bold text-slate-400 uppercase">奥行(mm)</label>
+                                                <input type="number" step="250" value={selectedId ? gridToMm(selectedEl.h) : gridToMm(baseEl.h)} onChange={(e) => {
+                                                    const mm = parseInt(e.target.value) || 250;
+                                                    const targetId = selectedId || baseEl.id;
+                                                    setElements(prev => prev.map(el => el.id === targetId ? {...el, h: mmToGrid(mm)} : el));
+                                                }} className="w-full p-2 text-sm border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center px-1">部屋を追加</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 px-1">
+                                            {ROOM_DATA.map(r => (
+                                                <button key={r.label} onClick={() => setElements([...elements, {...r, id: Date.now(), x: 4, y: 4, w: r.defaultW, h: r.defaultH, rotation: 0}])} className="p-2 border border-slate-100 bg-slate-50 hover:border-indigo-200 rounded-xl shadow-sm group transition-all text-center">
+                                                    <div className={`mx-auto w-full h-4 rounded-lg ${r.color.split(' ')[0]} border ${r.color.split(' ')[1]}`} />
+                                                    <span className="text-[9px] font-black group-hover:text-indigo-600 block mt-1">{r.label}</span>
+                                                </button>
+                                            ))}
+                                            <button onClick={() => {
+                                                const name = window.prompt("名前を入力してください", "");
+                                                if(name) setElements([...elements, {id: Date.now(), label: name, x: 4, y: 4, w: 8, h: 8, color: "bg-purple-100 border-purple-400", type: "room", rotation: 0}]);
+                                            }} className="p-2 border-2 border-dashed border-slate-200 bg-white hover:border-indigo-300 rounded-xl shadow-sm text-slate-400 flex flex-col items-center justify-center transition-all min-h-[50px]">
+                                                <SvgIcon name="Plus" size={14}/>
+                                                <span className="text-[8px] font-bold">新規部屋</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </aside>
+
+                        <main ref={mainRef} className="flex-1 bg-slate-200 relative overflow-hidden touch-none" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={(e) => {setInteractionMode(null); e.target.releasePointerCapture(e.pointerId);}}>
+                            {baseEl && (
+                                <div ref={canvasRef} className="absolute inset-0 pointer-events-none transition-transform duration-75 ease-out origin-top-left" style={{ transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` }}>
+                                    <div className="absolute top-[-5000px] left-[-5000px] w-[10000px] h-[10000px] bg-white shadow-2xl" style={{
+                                        backgroundImage: `linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px), linear-gradient(to right, #e2e8f0 1.5px, transparent 1.5px), linear-gradient(to bottom, #e2e8f0 1.5px, transparent 1.5px)`,
+                                        backgroundSize: `${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px, ${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px`
+                                    }} />
+                                    <div className="relative">
+                                        {[...elements].sort((a,b) => a.type === 'base' ? -1 : 1).map(el => (
+                                            <div key={el.id} data-id={el.id} className={`absolute flex flex-col items-center justify-center border-2 transition-all ${el.color} ${el.type === 'base' ? 'pointer-events-none border-dashed bg-white/60' : 'pointer-events-auto cursor-move'} ${selectedId === el.id ? 'ring-2 ring-indigo-500 z-40 scale-[1.01]' : 'z-10 shadow-sm'}`} style={getElementStyle(el)}>
+                                                {el.type !== 'base' && (
+                                                    <div className="text-center pointer-events-none p-1 overflow-hidden">
+                                                        <span className="font-black text-[11px] leading-none block truncate">{el.label}</span>
+                                                        {el.type === 'room' && <span className="text-[7px] text-slate-500 font-bold block mt-1 uppercase">{(el.w * 0.25).toFixed(1)}m × {(el.h * 0.25).toFixed(1)}m</span>}
+                                                    </div>
+                                                )}
+                                                {selectedId === el.id && (
+                                                    <div className="pointer-events-auto no-print">
+                                                        <button className="absolute -top-4 -right-4 bg-white border border-slate-200 rounded-full p-1.5 shadow-xl text-indigo-600 active:scale-75 transition-transform" onClick={(e) => { e.stopPropagation(); setElements(elements.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}><SvgIcon name="Rotate" size={14}/></button>
+                                                        {el.type === 'room' && <div className="absolute -bottom-4 -right-4 bg-indigo-600 text-white rounded-full p-1.5 shadow-xl border-2 border-white cursor-nwse-resize active:scale-90 transition-transform touch-none" data-action="resize"><SvgIcon name="Resize" size={14}/></div>}
+                                                        <button className="absolute -top-4 -left-4 bg-white border border-slate-200 rounded-full p-1.5 shadow-xl text-red-500 active:scale-75 transition-transform" onClick={(e) => { e.stopPropagation(); setElements(elements.filter(item => item.id !== el.id)); setSelectedId(null); }}><SvgIcon name="Trash" size={14}/></button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="absolute bottom-10 right-10 flex flex-col gap-5 z-50 no-print">
+                                <button onClick={resetView} className="w-16 h-16 bg-white rounded-full shadow-2xl flex items-center justify-center text-indigo-600 active:bg-indigo-50 border border-slate-100 transition-all hover:scale-110 active:scale-90 shadow-indigo-200/50"><SvgIcon name="Search" size={32} /></button>
+                                <div className="bg-white rounded-[2.5rem] shadow-2xl flex flex-col border border-slate-100 overflow-hidden shadow-slate-300/50">
+                                    <button onClick={() => setView(v => ({...v, scale: Math.min(v.scale * 1.2, 4)}))} className="w-16 h-16 flex items-center justify-center font-black text-3xl active:bg-slate-50 border-b border-slate-100 transition-colors">+</button>
+                                    <button onClick={() => setView(v => ({...v, scale: Math.max(v.scale * 0.8, 0.2)}))} className="w-16 h-16 flex items-center justify-center font-black text-3xl active:bg-slate-50 transition-colors">-</button>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
