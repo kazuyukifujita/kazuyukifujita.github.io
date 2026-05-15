@@ -157,7 +157,7 @@
             const mainRef = useRef(null);
             const canvasRef = useRef(null);
             const interactionRef = useRef({ 
-                startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0, startDist: 0, initialScale: 1
+                startX: 0, startY: 0, initialX: 0, initialY: 0, initialW: 0, initialH: 0, initialViewX: 0, initialViewY: 0, startDist: 0, initialScale: 1, linkedFurniture: []
             });
 
             const mmToGrid = (mm) => Math.max(1, Math.round((Number(mm) || 0) / UNIT_SIZE_MM));
@@ -169,6 +169,71 @@
                 const mWidth = (w * SCALE_FACTOR).toFixed(2);
                 const mHeight = (h * SCALE_FACTOR).toFixed(2);
                 return { sqm, tatami, mWidth, mHeight };
+            };
+
+            const normalizeRotation = (rotation) => ((Number(rotation) || 0) % 360 + 360) % 360;
+
+            const getVisualSize = (item) => {
+                const w = Number(item.w);
+                const h = Number(item.h);
+                const rotation = normalizeRotation(item.rotation);
+                return rotation === 90 || rotation === 270 ? { w: h, h: w } : { w, h };
+            };
+
+            const isFurnitureInsideRoom = (furniture, room) => {
+                if (!furniture || !room || furniture.type !== 'furniture' || room.type !== 'room') return false;
+                const furnitureSize = getVisualSize(furniture);
+                const roomSize = getVisualSize(room);
+                const furnitureCenterX = Number(furniture.x) + furnitureSize.w / 2;
+                const furnitureCenterY = Number(furniture.y) + furnitureSize.h / 2;
+                const roomLeft = Number(room.x);
+                const roomTop = Number(room.y);
+                return furnitureCenterX >= roomLeft && furnitureCenterX <= roomLeft + roomSize.w && furnitureCenterY >= roomTop && furnitureCenterY <= roomTop + roomSize.h;
+            };
+
+            const getLinkedFurniture = (room, sourceElements = elements) => {
+                if (!room || room.type !== 'room') return [];
+                return sourceElements
+                    .filter(item => isFurnitureInsideRoom(item, room))
+                    .map(item => ({
+                        id: item.id,
+                        initialX: Number(item.x),
+                        initialY: Number(item.y),
+                        initialW: Number(item.w),
+                        initialH: Number(item.h),
+                        initialRotation: Number(item.rotation) || 0
+                    }));
+            };
+
+            const rotateLinkedFurniture = (room, sourceElements = elements) => {
+                const linkedFurniture = getLinkedFurniture(room, sourceElements);
+                if (linkedFurniture.length === 0) {
+                    return item => item.id === room.id ? { ...item, rotation: (item.rotation + 90) % 360 } : item;
+                }
+
+                return item => {
+                    const nextRoomRotation = (normalizeRotation(room.rotation) + 90) % 360;
+                    if (item.id === room.id) return { ...item, rotation: nextRoomRotation };
+                    const linked = linkedFurniture.find(furniture => furniture.id === item.id);
+                    if (!linked) return item;
+
+                    const roomSize = getVisualSize(room);
+                    const furnitureSize = getVisualSize({
+                        ...item,
+                        w: linked.initialW,
+                        h: linked.initialH,
+                        rotation: linked.initialRotation
+                    });
+                    const relX = linked.initialX - Number(room.x);
+                    const relY = linked.initialY - Number(room.y);
+
+                    return {
+                        ...item,
+                        x: Math.round(Number(room.x) + roomSize.h - relY - furnitureSize.h),
+                        y: Math.round(Number(room.y) + relX),
+                        rotation: (linked.initialRotation + 90) % 360
+                    };
+                };
             };
 
             const exportProject = () => {
@@ -304,10 +369,10 @@
                     setSelectedId(id);
                     if (action === 'resize') {
                         setInteractionMode('resize');
-                        interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialW: Number(el.w), initialH: Number(el.h) };
+                        interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialW: Number(el.w), initialH: Number(el.h), linkedFurniture: [] };
                     } else {
                         setInteractionMode('move');
-                        interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialX: Number(el.x), initialY: Number(el.y) };
+                        interactionRef.current = { ...interactionRef.current, startX: clientX, startY: clientY, initialX: Number(el.x), initialY: Number(el.y), linkedFurniture: getLinkedFurniture(el) };
                     }
                 } else {
                     setSelectedId(null);
@@ -342,12 +407,18 @@
                     const dy_grid = (clientY - interactionRef.current.startY) / (view.scale * GRID_PIXELS);
 
                     setElements(prev => prev.map(el => {
-                        if (el.id !== selectedId) return el;
                         if (interactionMode === 'move') {
-                            return { ...el, x: Math.round(interactionRef.current.initialX + dx_grid), y: Math.round(interactionRef.current.initialY + dy_grid) };
-                        } else {
-                            return { ...el, w: Math.max(1, Math.round(interactionRef.current.initialW + dx_grid)), h: Math.max(1, Math.round(interactionRef.current.initialH + dy_grid)) };
+                            if (el.id === selectedId) {
+                                return { ...el, x: Math.round(interactionRef.current.initialX + dx_grid), y: Math.round(interactionRef.current.initialY + dy_grid) };
+                            }
+                            const linked = interactionRef.current.linkedFurniture.find(furniture => furniture.id === el.id);
+                            if (linked) {
+                                return { ...el, x: Math.round(linked.initialX + dx_grid), y: Math.round(linked.initialY + dy_grid) };
+                            }
+                            return el;
                         }
+                        if (el.id !== selectedId) return el;
+                        return { ...el, w: Math.max(1, Math.round(interactionRef.current.initialW + dx_grid)), h: Math.max(1, Math.round(interactionRef.current.initialH + dy_grid)) };
                     }));
                 }
             }, [interactionMode, selectedId, view.scale]);
@@ -630,7 +701,7 @@
                                                     {isSelected && !isBase && (
                                                         <div className="pointer-events-auto no-print">
                                                             <div className="absolute -top-5 -right-5 sm:-top-4 sm:-right-4 w-10 h-10 sm:w-8 sm:h-8 bg-white border border-slate-100 rounded-full flex items-center justify-center shadow-2xl text-indigo-600 active:scale-75 transition-transform cursor-pointer"
-                                                                onClick={(e) => { e.stopPropagation(); setElements(prev => prev.map(item => item.id === el.id ? {...item, rotation: (item.rotation + 90) % 360} : item)); }}
+                                                                onClick={(e) => { e.stopPropagation(); setElements(prev => prev.map(rotateLinkedFurniture(el, prev))); }}
                                                             >
                                                                 <SvgIcon name="Rotate" size={18} className="sm:w-4 sm:h-4" />
                                                             </div>
