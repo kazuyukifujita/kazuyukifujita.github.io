@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>間取りスケッチャー | 共有・プリセット対応版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -26,6 +26,23 @@
             background-color: rgba(0, 0, 0, 0.4);
             backdrop-filter: blur(4px);
         }
+
+        .app-shell {
+            height: 100vh;
+            height: 100dvh;
+        }
+
+        .floating-zoom-controls {
+            right: max(1rem, env(safe-area-inset-right));
+            bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+
+        @media (min-width: 640px) {
+            .floating-zoom-controls {
+                right: max(1.5rem, env(safe-area-inset-right));
+                bottom: max(1.5rem, env(safe-area-inset-bottom));
+            }
+        }
     </style>
 </head>
 <body class="text-slate-900 overflow-hidden">
@@ -37,6 +54,7 @@
         const UNIT_SIZE_MM = 250;
         const GRID_PIXELS = 15;   
         const SCALE_FACTOR = 0.25; 
+        const EXPORT_MARGIN_GRID = 2; // 0.5m
 
         // --- 更新されたプリセットデータ ---
         const PRESET_PLAN = {
@@ -340,12 +358,87 @@
             };
 
             const exportPNG = async () => {
-                if (!canvasRef.current || !window.html2canvas) return;
-                const capture = await html2canvas(canvasRef.current, { scale: 2, backgroundColor: "#ffffff" });
-                const link = document.createElement('a');
-                link.download = 'floor_plan.png';
-                link.href = capture.toDataURL();
-                link.click();
+                if (!baseEl || !window.html2canvas) return;
+
+                const marginPx = EXPORT_MARGIN_GRID * GRID_PIXELS;
+                const exportWidth = (Number(baseEl.w) + EXPORT_MARGIN_GRID * 2) * GRID_PIXELS;
+                const exportHeight = (Number(baseEl.h) + EXPORT_MARGIN_GRID * 2) * GRID_PIXELS;
+                const exportRoot = document.createElement('div');
+                exportRoot.style.position = 'fixed';
+                exportRoot.style.left = '0';
+                exportRoot.style.top = '0';
+                exportRoot.style.width = `${exportWidth}px`;
+                exportRoot.style.height = `${exportHeight}px`;
+                exportRoot.style.overflow = 'hidden';
+                exportRoot.style.backgroundColor = '#ffffff';
+                exportRoot.style.pointerEvents = 'none';
+                exportRoot.style.zIndex = '-1';
+                exportRoot.style.backgroundImage = `
+                    linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px),
+                    linear-gradient(to right, #e2e8f0 1.5px, transparent 1.5px), linear-gradient(to bottom, #e2e8f0 1.5px, transparent 1.5px)
+                `;
+                exportRoot.style.backgroundSize = `${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px, ${GRID_PIXELS * 2}px ${GRID_PIXELS * 2}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px, ${GRID_PIXELS * 4}px ${GRID_PIXELS * 4}px`;
+                exportRoot.style.backgroundPosition = `${marginPx}px ${marginPx}px`;
+
+                const exportContent = document.createElement('div');
+                exportContent.style.position = 'relative';
+                exportContent.style.width = '100%';
+                exportContent.style.height = '100%';
+                exportRoot.appendChild(exportContent);
+
+                sortedElements.forEach(el => {
+                    const node = document.createElement('div');
+                    const isBase = el.type === 'base';
+                    node.dataset.exportType = el.type;
+                    node.className = `absolute flex flex-col items-center justify-center border-2 ${el.color} ${isBase ? 'border-dashed border-slate-300 shadow-2xl bg-white/80' : 'border-opacity-50 shadow-sm'} ${el.type === 'furniture' ? 'rounded-2xl opacity-90' : 'rounded-sm'}`;
+                    const style = getElementStyle({ ...el, x: Number(el.x) + EXPORT_MARGIN_GRID, y: Number(el.y) + EXPORT_MARGIN_GRID });
+                    Object.assign(node.style, {
+                        left: `${style.left}px`,
+                        top: `${style.top}px`,
+                        width: `${style.width}px`,
+                        height: `${style.height}px`,
+                        transform: style.transform,
+                        transformOrigin: style.transformOrigin
+                    });
+
+                    if (!isBase) {
+                        const labelWrap = document.createElement('div');
+                        labelWrap.className = 'text-center p-1 pointer-events-none w-full overflow-hidden';
+                        const label = document.createElement('span');
+                        label.className = 'font-black text-slate-800 text-[11px] leading-none block';
+                        label.textContent = el.label;
+                        labelWrap.appendChild(label);
+
+                        if (el.type === 'room') {
+                            const { sqm, tatami, mWidth, mHeight } = calculateArea(el.w, el.h);
+                            const sizeWrap = document.createElement('div');
+                            sizeWrap.className = 'mt-1 space-y-0.5';
+                            const area = document.createElement('span');
+                            area.className = 'text-[9px] text-slate-500 block font-black uppercase tracking-tighter leading-none';
+                            area.textContent = `${tatami}畳 / ${sqm}㎡`;
+                            const dimensions = document.createElement('span');
+                            dimensions.className = 'text-[8px] text-indigo-400 block font-black leading-none';
+                            dimensions.textContent = `${mWidth}m × ${mHeight}m`;
+                            sizeWrap.append(area, dimensions);
+                            labelWrap.appendChild(sizeWrap);
+                        }
+
+                        node.appendChild(labelWrap);
+                    }
+
+                    exportContent.appendChild(node);
+                });
+
+                document.body.appendChild(exportRoot);
+                try {
+                    const capture = await html2canvas(exportRoot, { scale: 2, backgroundColor: "#ffffff" });
+                    const link = document.createElement('a');
+                    link.download = 'floor_plan.png';
+                    link.href = capture.toDataURL();
+                    link.click();
+                } finally {
+                    exportRoot.remove();
+                }
             };
 
             const sortedElements = useMemo(() => {
@@ -379,7 +472,7 @@
             };
 
             return (
-                <div className="flex flex-col h-screen bg-slate-100 overflow-hidden font-sans select-none text-slate-900">
+                <div className="app-shell flex flex-col bg-slate-100 overflow-hidden font-sans select-none text-slate-900">
                     <header className="bg-white border-b border-slate-200 px-6 py-3 flex justify-between items-center z-50 shrink-0 shadow-sm">
                         <div className="flex items-center gap-3">
                             <div className="bg-indigo-600 p-2 rounded-xl text-white shadow-lg"><SvgIcon name="Home" size={22} /></div>
@@ -565,7 +658,7 @@
                                 </div>
                             )}
 
-                            <div className="absolute bottom-6 right-6 sm:bottom-8 sm:right-8 flex flex-col gap-3 z-50 no-print">
+                            <div className="floating-zoom-controls absolute flex flex-col gap-3 z-50 no-print">
                                 <button onClick={resetView} className="w-12 h-12 sm:w-14 sm:h-14 bg-white rounded-full shadow-xl flex items-center justify-center text-indigo-600 active:bg-indigo-50 border border-slate-100"><SvgIcon name="Search" size={24} className="sm:w-7 sm:h-7" /></button>
                                 <div className="bg-white rounded-[2rem] shadow-xl flex flex-col border border-slate-100 overflow-hidden">
                                     <button onClick={() => setView(v => ({...v, scale: Math.min(v.scale * 1.2, 4)}))} className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center font-black text-2xl sm:text-[28px] active:bg-slate-50 border-b-2 border-slate-100 transition-colors">+</button>
