@@ -13,10 +13,16 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
         body { 
             font-family: 'Inter', 'Noto Sans JP', sans-serif; 
-            touch-action: none;
+            touch-action: manipulation;
             overscroll-behavior: none;
             margin: 0;
             background-color: #f1f5f9;
+        }
+        input, button { touch-action: manipulation; }
+        input[type="number"] {
+            font-size: 16px;
+            user-select: text;
+            -webkit-user-select: text;
         }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -595,14 +601,14 @@
                         </div>
                     )}
 
-                    <div className="flex flex-1 overflow-hidden relative">
-                        <aside className="w-16 sm:w-64 bg-white border-r border-slate-200 flex flex-col overflow-y-auto p-2 sm:p-5 space-y-6 scrollbar-hide z-40 shrink-0 shadow-xl">
+                    <div className="flex flex-col sm:flex-row flex-1 overflow-hidden relative">
+                        <aside className="w-full sm:w-64 max-h-[42dvh] sm:max-h-none bg-white border-b sm:border-b-0 sm:border-r border-slate-200 flex flex-col overflow-y-auto p-3 sm:p-5 space-y-6 scrollbar-hide z-40 shrink-0 shadow-xl">
                             {!baseEl ? (
                                 <section className="space-y-4 pt-2">
                                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">家のサイズを決定</h3>
                                     <div className="space-y-4 text-left">
-                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">幅 (mm)</label><input type="number" step="250" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-lg"/></div>
-                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">奥行 (mm)</label><input type="number" step="250" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-lg"/></div>
+                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">幅 (mm)</label><input type="number" step="250" inputMode="numeric" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-base sm:text-lg"/></div>
+                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">奥行 (mm)</label><input type="number" step="250" inputMode="numeric" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-base sm:text-lg"/></div>
                                         <button onClick={() => addElement({ label: '家の外形', defaultW: baseDraft.w, defaultH: baseDraft.h, color: 'bg-white/50 border-slate-300 border-2 border-dashed', type: 'base' })} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl hover:bg-indigo-700 transition-all mt-2 tracking-widest">確定して配置</button>
                                     </div>
                                 </section>
@@ -613,19 +619,19 @@
                                         <div className="grid grid-cols-1 gap-2">
                                             <div className="space-y-1">
                                                 <label className="text-[9px] font-black text-slate-500 uppercase">幅 (mm)</label>
-                                                <input type="number" step="250" value={selectedId ? gridToMm(selectedEl.w) : gridToMm(baseEl.w)} onChange={(e) => {
+                                                <input type="number" step="250" inputMode="numeric" value={selectedId ? gridToMm(selectedEl.w) : gridToMm(baseEl.w)} onChange={(e) => {
                                                     const mm = parseInt(e.target.value) || 250;
                                                     const targetId = selectedId || baseEl.id;
                                                     setElements(prev => prev.map(el => el.id === targetId ? {...el, w: mmToGrid(mm)} : el));
-                                                }} className="w-full p-2 text-sm border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
+                                                }} className="w-full p-2 text-base border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
                                             </div>
                                             <div className="space-y-1">
                                                 <label className="text-[9px] font-black text-slate-500 uppercase">奥行 (mm)</label>
-                                                <input type="number" step="250" value={selectedId ? gridToMm(selectedEl.h) : gridToMm(baseEl.h)} onChange={(e) => {
+                                                <input type="number" step="250" inputMode="numeric" value={selectedId ? gridToMm(selectedEl.h) : gridToMm(baseEl.h)} onChange={(e) => {
                                                     const mm = parseInt(e.target.value) || 250;
                                                     const targetId = selectedId || baseEl.id;
                                                     setElements(prev => prev.map(el => el.id === targetId ? {...el, h: mmToGrid(mm)} : el));
-                                                }} className="w-full p-2 text-sm border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
+                                                }} className="w-full p-2 text-base border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
                                             </div>
                                         </div>
                                     </section>

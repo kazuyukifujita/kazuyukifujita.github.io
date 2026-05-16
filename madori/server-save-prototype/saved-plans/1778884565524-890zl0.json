@@ -1,0 +1,24 @@
+{
+  "id": "1778884565524-890zl0",
+  "name": "APIテスト",
+  "createdAt": "2026-05-15T22:36:05.524Z",
+  "updatedAt": "2026-05-15T22:36:05.524Z",
+  "thumbnail": "data:image/png;base64,test",
+  "elements": [
+    {
+      "id": 1,
+      "type": "base",
+      "label": "家の外形",
+      "x": 0,
+      "y": 0,
+      "w": 4,
+      "h": 4,
+      "color": "bg-white border-slate-300",
+      "rotation": 0
+    }
+  ],
+  "baseDraft": {
+    "w": 4,
+    "h": 4
+  }
+}
