@@ -19,7 +19,7 @@
             background-color: #f1f5f9;
         }
         input, button { touch-action: manipulation; }
-        input[type="number"] {
+        input.dimension-input {
             font-size: 16px;
             user-select: text;
             -webkit-user-select: text;
@@ -127,6 +127,52 @@
             { label: 'キッチン設備', defaultW: 10, defaultH: 4, color: 'bg-emerald-200 border-emerald-400', type: 'furniture', icon: 'ChefHat' },
             { label: 'カップボード', defaultW: 8, defaultH: 2, color: 'bg-orange-200 border-orange-400', type: 'furniture', icon: 'Layout' },
         ];
+
+        const DimensionInput = ({ label, value, onCommit, large = false }) => {
+            const [draft, setDraft] = useState(String(value));
+
+            useEffect(() => {
+                setDraft(String(value));
+            }, [value]);
+
+            const commit = (rawValue = draft) => {
+                const numeric = Number(String(rawValue).replace(/[^\d]/g, ''));
+                const safeValue = Number.isFinite(numeric) && numeric > 0 ? numeric : value;
+                onCommit(safeValue);
+            };
+
+            const stepBy = (delta) => {
+                const nextValue = Math.max(UNIT_SIZE_MM, value + delta);
+                setDraft(String(nextValue));
+                onCommit(nextValue);
+            };
+
+            return (
+                <div>
+                    <label className="text-[9px] font-black text-slate-500 uppercase block mb-1">{label}</label>
+                    <div className="flex overflow-hidden rounded-xl border bg-white focus-within:ring-4 focus-within:ring-indigo-50">
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, ''))}
+                            onBlur={() => commit()}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.currentTarget.blur();
+                                }
+                            }}
+                            className={`dimension-input min-w-0 flex-1 border-0 bg-white px-3 outline-none font-bold ${large ? 'py-3 text-base sm:text-lg' : 'py-2 text-base'}`}
+                        />
+                        <div className="flex flex-col border-l border-slate-200">
+                            <button type="button" onClick={() => stepBy(UNIT_SIZE_MM)} className="w-10 flex-1 min-h-[24px] bg-slate-50 text-slate-700 font-black leading-none active:bg-indigo-50">+</button>
+                            <button type="button" onClick={() => stepBy(-UNIT_SIZE_MM)} className="w-10 flex-1 min-h-[24px] bg-slate-50 text-slate-700 font-black leading-none border-t border-slate-200 active:bg-indigo-50">-</button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
 
         const SvgIcon = ({ name, size = 18, className = "" }) => {
             const paths = {
@@ -607,8 +653,8 @@
                                 <section className="space-y-4 pt-2">
                                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">家のサイズを決定</h3>
                                     <div className="space-y-4 text-left">
-                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">幅 (mm)</label><input type="number" step="250" inputMode="numeric" value={gridToMm(baseDraft.w)} onChange={(e) => setBaseDraft({...baseDraft, w: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-base sm:text-lg"/></div>
-                                        <div><label className="text-[9px] font-black text-slate-400 block mb-1">奥行 (mm)</label><input type="number" step="250" inputMode="numeric" value={gridToMm(baseDraft.h)} onChange={(e) => setBaseDraft({...baseDraft, h: mmToGrid(e.target.value)})} className="w-full p-3 border rounded-xl outline-none focus:ring-4 ring-indigo-50 font-bold text-base sm:text-lg"/></div>
+                                        <DimensionInput label="幅 (mm)" value={gridToMm(baseDraft.w)} onCommit={(mm) => setBaseDraft({...baseDraft, w: mmToGrid(mm)})} large />
+                                        <DimensionInput label="奥行 (mm)" value={gridToMm(baseDraft.h)} onCommit={(mm) => setBaseDraft({...baseDraft, h: mmToGrid(mm)})} large />
                                         <button onClick={() => addElement({ label: '家の外形', defaultW: baseDraft.w, defaultH: baseDraft.h, color: 'bg-white/50 border-slate-300 border-2 border-dashed', type: 'base' })} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase shadow-xl hover:bg-indigo-700 transition-all mt-2 tracking-widest">確定して配置</button>
                                     </div>
                                 </section>
@@ -617,22 +663,14 @@
                                     <section className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 shadow-inner">
                                         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2"><SvgIcon name="Settings" size={14}/> {selectedId && selectedEl.type !== 'base' ? 'パーツ微調整' : '家の外寸微調整'}</h3>
                                         <div className="grid grid-cols-1 gap-2">
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase">幅 (mm)</label>
-                                                <input type="number" step="250" inputMode="numeric" value={selectedId ? gridToMm(selectedEl.w) : gridToMm(baseEl.w)} onChange={(e) => {
-                                                    const mm = parseInt(e.target.value) || 250;
-                                                    const targetId = selectedId || baseEl.id;
-                                                    setElements(prev => prev.map(el => el.id === targetId ? {...el, w: mmToGrid(mm)} : el));
-                                                }} className="w-full p-2 text-base border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <label className="text-[9px] font-black text-slate-500 uppercase">奥行 (mm)</label>
-                                                <input type="number" step="250" inputMode="numeric" value={selectedId ? gridToMm(selectedEl.h) : gridToMm(baseEl.h)} onChange={(e) => {
-                                                    const mm = parseInt(e.target.value) || 250;
-                                                    const targetId = selectedId || baseEl.id;
-                                                    setElements(prev => prev.map(el => el.id === targetId ? {...el, h: mmToGrid(mm)} : el));
-                                                }} className="w-full p-2 text-base border rounded-lg bg-white font-bold outline-none focus:ring-2 ring-indigo-200"/>
-                                            </div>
+                                            <DimensionInput label="幅 (mm)" value={selectedId ? gridToMm(selectedEl.w) : gridToMm(baseEl.w)} onCommit={(mm) => {
+                                                const targetId = selectedId || baseEl.id;
+                                                setElements(prev => prev.map(el => el.id === targetId ? {...el, w: mmToGrid(mm)} : el));
+                                            }} />
+                                            <DimensionInput label="奥行 (mm)" value={selectedId ? gridToMm(selectedEl.h) : gridToMm(baseEl.h)} onCommit={(mm) => {
+                                                const targetId = selectedId || baseEl.id;
+                                                setElements(prev => prev.map(el => el.id === targetId ? {...el, h: mmToGrid(mm)} : el));
+                                            }} />
                                         </div>
                                     </section>
                                     <section className="space-y-4">
