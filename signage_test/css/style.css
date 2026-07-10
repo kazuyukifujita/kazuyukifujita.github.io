@@ -173,11 +173,23 @@ input {
     0 0 0 1px rgba(255, 255, 255, 0.5) inset,
     0 0 26px var(--cloud-glow, rgba(255,255,255,0.25));
   backdrop-filter: blur(1px);
-  cursor: pointer;
+  cursor: grab;
+  touch-action: none;
   will-change: transform;
   animation: blobmorph 14s ease-in-out infinite;
   animation-delay: var(--phase-delay, 0s);
   transition: box-shadow 0.25s ease;
+}
+
+.cloud-bubble.dragging {
+  cursor: grabbing;
+  z-index: 30;
+  animation-play-state: paused;
+  box-shadow:
+    0 16px 44px rgba(10, 12, 30, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.7) inset,
+    0 0 40px var(--cloud-glow, rgba(255,255,255,0.5));
+  transition: none;
 }
 
 .cloud-bubble:hover {
@@ -272,6 +284,39 @@ input {
 
 .cloud-delete:hover {
   background: var(--danger);
+}
+
+.cloud-like {
+  position: absolute;
+  bottom: -12px;
+  right: -6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: rgba(255, 255, 255, 0.94);
+  color: #b34760;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 999px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.32);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.cloud-like:hover {
+  transform: scale(1.08);
+  background: #fff;
+}
+
+.cloud-like.liked-pop {
+  animation: like-pop 0.28s ease;
+}
+
+@keyframes like-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.35); }
+  100% { transform: scale(1); }
 }
 
 /* ---------- Input bar ---------- */
@@ -444,6 +489,31 @@ input {
   color: rgba(255,255,255,0.4);
 }
 
+.thread-root-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thread-root-like-btn {
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #ffb7c8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.thread-root-like-btn:hover {
+  background: rgba(255,255,255,0.16);
+  transform: scale(1.05);
+}
+
 .thread-root-delete-btn {
   border: none;
   background: none;
@@ -501,6 +571,33 @@ input {
   color: rgba(255,255,255,0.35);
   margin-top: 2px;
   display: block;
+}
+
+.reply-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reply-like {
+  flex-shrink: 0;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #ffb7c8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.reply-like:hover {
+  background: rgba(255,255,255,0.16);
+  transform: scale(1.06);
 }
 
 .reply-delete {

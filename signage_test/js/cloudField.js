@@ -11,6 +11,10 @@ const REPULSION_STRENGTH = 0.024;
 const ATTRACTION_STRENGTH = 0.0026;
 const ATTRACTION_MIN_SIM = 0.16;
 const ATTRACTION_MAX_RANGE = 520;
+// 反発ゾーンのすぐ外側に「無風地帯」を設け、その先で引力を滑らかに立ち上げる。
+// こうしないと反発と引力の境界で力が不連続になり、雲がガタガタ振動してしまう。
+const ATTRACTION_DEAD_ZONE = 60;
+const ATTRACTION_RAMP = 140;
 const MAX_SPEED = 0.05; // px/ms
 const DAMPING = 0.965;
 const TOP_MARGIN = 96;
@@ -72,6 +76,7 @@ export class CloudField {
     this.container = container;
     this.onOpenThread = handlers.onOpenThread;
     this.onRequestDelete = handlers.onRequestDelete;
+    this.onLike = handlers.onLike;
     this.clouds = new Map();
     this.simCache = new Map();
     this.bounds = { width: window.innerWidth, height: window.innerHeight };
@@ -121,7 +126,7 @@ export class CloudField {
     if (!cloud) return null;
     const trimmed = text.trim();
     if (!trimmed) return null;
-    const reply = { id: generateId(), text: trimmed, createdAt: Date.now() };
+    const reply = { id: generateId(), text: trimmed, createdAt: Date.now(), likes: 0 };
     cloud.replies.push(reply);
     this._resize(cloud);
     return reply;
@@ -132,6 +137,23 @@ export class CloudField {
     if (!cloud) return;
     cloud.replies = cloud.replies.filter((r) => r.id !== replyId);
     this._resize(cloud);
+  }
+
+  likeCloud(cloudId) {
+    const cloud = this.clouds.get(cloudId);
+    if (!cloud) return null;
+    cloud.likes = (cloud.likes || 0) + 1;
+    this._applyBadges(cloud);
+    return cloud.likes;
+  }
+
+  likeReply(cloudId, replyId) {
+    const cloud = this.clouds.get(cloudId);
+    if (!cloud) return null;
+    const reply = cloud.replies.find((r) => r.id === replyId);
+    if (!reply) return null;
+    reply.likes = (reply.likes || 0) + 1;
+    return reply.likes;
   }
 
   deleteCloud(cloudId) {
@@ -154,6 +176,7 @@ export class CloudField {
       text: c.text,
       createdAt: c.createdAt,
       replies: c.replies,
+      likes: c.likes || 0,
       x: Math.round(c.x),
       y: Math.round(c.y),
     }));
@@ -168,6 +191,7 @@ export class CloudField {
       text: data.text,
       createdAt: data.createdAt,
       replies,
+      likes: typeof data.likes === "number" ? data.likes : 0,
       bigrams,
       d,
       r: d / 2,
@@ -181,6 +205,10 @@ export class CloudField {
       freq1: 0.15 + Math.random() * 0.1,
       freq2: 0.05 + Math.random() * 0.05,
       paletteIndex: hashToIndex(data.id, PALETTES.length),
+      dragging: false,
+      dragPointerId: null,
+      dragMoved: 0,
+      suppressClick: false,
     };
 
     const anchor = document.createElement("div");
@@ -208,6 +236,28 @@ export class CloudField {
     badge.append("💬 ", badgeCount);
     bubble.appendChild(badge);
 
+    const likeBtn = document.createElement("button");
+    likeBtn.className = "cloud-like";
+    likeBtn.type = "button";
+    likeBtn.setAttribute("aria-label", "いいね");
+    const likeIcon = document.createElement("span");
+    likeIcon.className = "like-icon";
+    likeIcon.textContent = "🤍";
+    const likeCount = document.createElement("span");
+    likeCount.className = "like-count";
+    likeBtn.appendChild(likeIcon);
+    likeBtn.appendChild(likeCount);
+    likeBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      this.likeCloud(state.id);
+      likeBtn.classList.remove("liked-pop");
+      // force reflow so the animation can restart on repeated clicks
+      void likeBtn.offsetWidth;
+      likeBtn.classList.add("liked-pop");
+      this.onLike && this.onLike(state.id);
+    });
+    bubble.appendChild(likeBtn);
+
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "cloud-delete";
     deleteBtn.type = "button";
@@ -219,7 +269,13 @@ export class CloudField {
     });
     bubble.appendChild(deleteBtn);
 
-    const openThread = () => this.onOpenThread && this.onOpenThread(state.id);
+    const openThread = () => {
+      if (state.suppressClick) {
+        state.suppressClick = false;
+        return;
+      }
+      this.onOpenThread && this.onOpenThread(state.id);
+    };
     bubble.addEventListener("click", openThread);
     bubble.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
@@ -227,6 +283,51 @@ export class CloudField {
         openThread();
       }
     });
+
+    const DRAG_CLICK_THRESHOLD = 6;
+    let dragStartClientX = 0;
+    let dragStartClientY = 0;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    bubble.addEventListener("pointerdown", (event) => {
+      if (event.target.closest(".cloud-delete") || event.target.closest(".cloud-like")) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      state.dragging = true;
+      state.dragPointerId = event.pointerId;
+      state.dragMoved = 0;
+      dragStartClientX = event.clientX;
+      dragStartClientY = event.clientY;
+      dragStartX = state.x;
+      dragStartY = state.y;
+      bubble.classList.add("dragging");
+      bubble.setPointerCapture(event.pointerId);
+    });
+
+    bubble.addEventListener("pointermove", (event) => {
+      if (!state.dragging || event.pointerId !== state.dragPointerId) return;
+      const dx = event.clientX - dragStartClientX;
+      const dy = event.clientY - dragStartClientY;
+      state.dragMoved = Math.max(state.dragMoved, Math.hypot(dx, dy));
+      state.x = clamp(dragStartX + dx, state.r, Math.max(state.r, this.bounds.width - state.r));
+      state.y = clamp(dragStartY + dy, state.r, Math.max(state.r, this.bounds.height - state.r));
+      this._applyTransform(state);
+    });
+
+    const endDrag = (event) => {
+      if (!state.dragging || event.pointerId !== state.dragPointerId) return;
+      state.dragging = false;
+      state.dragPointerId = null;
+      bubble.classList.remove("dragging");
+      if (bubble.hasPointerCapture(event.pointerId)) {
+        bubble.releasePointerCapture(event.pointerId);
+      }
+      if (state.dragMoved > DRAG_CLICK_THRESHOLD) {
+        state.suppressClick = true;
+      }
+    };
+    bubble.addEventListener("pointerup", endDrag);
+    bubble.addEventListener("pointercancel", endDrag);
 
     anchor.appendChild(bubble);
     this.container.appendChild(anchor);
@@ -236,8 +337,11 @@ export class CloudField {
     state.textEl = textEl;
     state.badgeEl = badge;
     state.badgeCountEl = badgeCount;
+    state.likeBtn = likeBtn;
+    state.likeCountEl = likeCount;
 
     this._applySize(state);
+    this._applyBadges(state);
     this._applyTransform(state);
 
     this.clouds.set(state.id, state);
@@ -248,11 +352,15 @@ export class CloudField {
     cloud.d = computeDiameter(cloud.text, cloud.replies.length);
     cloud.r = cloud.d / 2;
     this._applySize(cloud);
+    this._applyBadges(cloud);
   }
 
   _applySize(cloud) {
     cloud.el.style.setProperty("--d", `${cloud.d}px`);
     cloud.el.style.fontSize = `${computeFontSize(cloud.text, cloud.d).toFixed(1)}px`;
+  }
+
+  _applyBadges(cloud) {
     const count = cloud.replies.length;
     if (count > 0) {
       cloud.badgeEl.classList.add("visible");
@@ -260,6 +368,7 @@ export class CloudField {
     } else {
       cloud.badgeEl.classList.remove("visible");
     }
+    cloud.likeCountEl.textContent = String(cloud.likes || 0);
   }
 
   _applyTransform(cloud) {
@@ -307,6 +416,7 @@ export class CloudField {
           dist = 0.001;
         }
         const minDist = a.r + b.r + REPULSION_PADDING;
+        const restDist = minDist + ATTRACTION_DEAD_ZONE;
         if (dist < minDist) {
           const overlap = minDist - dist;
           const nx = dx / dist;
@@ -319,12 +429,16 @@ export class CloudField {
           a.ay -= ny * force * aShare;
           b.ax += nx * force * bShare;
           b.ay += ny * force * bShare;
-        } else if (dist < ATTRACTION_MAX_RANGE) {
+        } else if (dist > restDist && dist < ATTRACTION_MAX_RANGE) {
           const sim = this.simCache.get(pairKey(a.id, b.id));
           if (sim) {
+            // restDist〜restDist+ATTRACTION_RAMPの範囲で0→1へなめらかに立ち上げ、
+            // 反発ゾーン境界での急激な力の反転(=振動)を防ぐ。
+            const t = clamp((dist - restDist) / ATTRACTION_RAMP, 0, 1);
+            const ramp = t * t * (3 - 2 * t);
             const nx = dx / dist;
             const ny = dy / dist;
-            const force = sim * ATTRACTION_STRENGTH * Math.min(dist, 260);
+            const force = sim * ATTRACTION_STRENGTH * ramp * Math.min(dist, 260);
             a.ax += nx * force;
             a.ay += ny * force;
             b.ax -= nx * force;
@@ -335,6 +449,13 @@ export class CloudField {
     }
 
     for (const c of list) {
+      if (c.dragging) {
+        // ポインタ操作中は物理演算をスキップし、位置はドラッグハンドラ側で直接更新する。
+        c.vx = 0;
+        c.vy = 0;
+        continue;
+      }
+
       const left = SIDE_MARGIN + c.r;
       const right = Math.max(left, this.bounds.width - SIDE_MARGIN - c.r);
       const top = TOP_MARGIN + c.r;

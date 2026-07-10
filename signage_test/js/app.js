@@ -77,6 +77,18 @@ const threadModal = new ThreadModal({
       persist();
     });
   },
+  onLikeRoot(cloudId) {
+    cloudField.likeCloud(cloudId);
+    const cloud = cloudField.getCloud(cloudId);
+    if (cloud) threadModal.refresh(cloud);
+    persist();
+  },
+  onLikeReply(cloudId, replyId) {
+    cloudField.likeReply(cloudId, replyId);
+    const cloud = cloudField.getCloud(cloudId);
+    if (cloud) threadModal.refresh(cloud);
+    persist();
+  },
 });
 
 const cloudField = new CloudField(cloudLayer, {
@@ -93,6 +105,13 @@ const cloudField = new CloudField(cloudLayer, {
       updateEmptyState();
       persist();
     });
+  },
+  onLike(cloudId) {
+    if (threadModal.isOpenFor(cloudId)) {
+      const cloud = cloudField.getCloud(cloudId);
+      if (cloud) threadModal.refresh(cloud);
+    }
+    persist();
   },
 });
 

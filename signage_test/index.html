@@ -47,7 +47,12 @@
         <p id="thread-root-text"></p>
         <div class="thread-root-meta">
           <span id="thread-root-time" class="thread-time"></span>
-          <button id="thread-root-delete" class="thread-root-delete-btn" type="button">元コメントを削除</button>
+          <div class="thread-root-actions">
+            <button id="thread-root-like" class="thread-root-like-btn" type="button" aria-label="いいね">
+              🤍 <span id="thread-root-like-count">0</span>
+            </button>
+            <button id="thread-root-delete" class="thread-root-delete-btn" type="button">元コメントを削除</button>
+          </div>
         </div>
       </div>
       <div id="thread-replies" class="thread-replies"></div>
