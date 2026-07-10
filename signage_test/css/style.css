@@ -163,8 +163,10 @@ input {
   height: var(--d);
   pointer-events: auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   padding: 14px 18px;
   background: linear-gradient(160deg, rgba(255,255,255,0.96), var(--cloud-tint, #eef1ff) 75%);
   border-radius: 58% 42% 55% 45% / 48% 55% 45% 52%;
@@ -231,27 +233,40 @@ input {
   line-height: 1.35;
   overflow-wrap: anywhere;
   word-break: break-word;
+  max-width: 100%;
   max-height: 100%;
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  /* JS側の幾何計算で140文字でも収まるようフォント/直径を決めているため、
+     ここは万一のズレに備えた安全策として余裕を持たせておく。 */
+  -webkit-line-clamp: 14;
   -webkit-box-orient: vertical;
 }
 
+/* コメント数・いいね数はバブル内に収まる形で下部にまとめて表示する */
+.cloud-stats {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.cloud-stats.visible { display: flex; }
+
 .cloud-badge {
-  position: absolute;
-  top: -8px;
-  right: -6px;
   background: var(--accent-strong);
   color: #2a1200;
   font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 999px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
   display: none;
   align-items: center;
   gap: 3px;
+  flex-shrink: 0;
 }
 
 .cloud-badge.visible { display: inline-flex; }
@@ -286,46 +301,30 @@ input {
   background: var(--danger);
 }
 
-.cloud-like {
-  position: absolute;
-  bottom: -12px;
-  right: -6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  background: rgba(255, 255, 255, 0.94);
+/* 一覧(雲)ではいいねは押せない表示専用バッジ。0件のときはバッジごと非表示。 */
+.cloud-like-badge {
+  background: rgba(255, 255, 255, 0.85);
   color: #b34760;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 4px 9px;
+  padding: 3px 8px;
   border-radius: 999px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.32);
-  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  display: none;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
-.cloud-like:hover {
-  transform: scale(1.08);
-  background: #fff;
-}
+.cloud-like-badge.visible { display: inline-flex; }
 
-.cloud-like.liked-pop {
-  animation: like-pop 0.28s ease;
-}
-
-/* いいね数は0件のときは数字を表示せずアイコンのみにする */
+/* スレッド画面のいいねボタンは0件でもアイコンは表示し、数字だけ0件時に隠す */
 .like-count {
   display: none;
 }
 
 .like-count.visible {
   display: inline;
-}
-
-@keyframes like-pop {
-  0% { transform: scale(1); }
-  45% { transform: scale(1.35); }
-  100% { transform: scale(1); }
 }
 
 /* ---------- Input bar ---------- */

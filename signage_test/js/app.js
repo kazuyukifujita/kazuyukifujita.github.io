@@ -106,13 +106,6 @@ const cloudField = new CloudField(cloudLayer, {
       persist();
     });
   },
-  onLike(cloudId) {
-    if (threadModal.isOpenFor(cloudId)) {
-      const cloud = cloudField.getCloud(cloudId);
-      if (cloud) threadModal.refresh(cloud);
-    }
-    persist();
-  },
 });
 
 function submitComment() {

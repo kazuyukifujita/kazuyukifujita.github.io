@@ -51,20 +51,59 @@ function hashToIndex(str, mod) {
   return h % mod;
 }
 
-function computeDiameter(text, replyCount) {
-  const len = text.length;
-  const base = 108;
-  const growth = Math.sqrt(len) * 15;
-  const replyBonus = Math.min(replyCount * 5, 50);
-  return clamp(base + growth + replyBonus, 110, 300);
+// 雲の直径とフォントサイズは連動して決める:「入力上限140文字でも必ず枠内に収まる」ことを
+// 幾何計算で保証したうえで、短いコメントほど大きく・長いコメントほど直径を広げつつ
+// フォントを floor まで縮める、という見た目にする。
+const MAX_COMMENT_LENGTH = 140;
+const MIN_DIAMETER = 120;
+const MAX_DIAMETER = 380;
+const MIN_FONT_SIZE = 13;
+const MAX_FONT_SIZE = 26;
+const LINE_HEIGHT_RATIO = 1.35;
+// 太字フォントの実際のグリフ幅や単語途中の折り返しロスを吸収する安全マージン。
+const FIT_SAFETY = 1.18;
+const BUBBLE_PAD_X = 36; // 左右パディング合計 (padding: 14px 18px)
+const BUBBLE_PAD_Y_BASE = 30; // 上下パディングのみ(バッジ行なし)
+const BUBBLE_PAD_Y_STATS = 60; // バッジ行(gap+ピル)を含めた上下方向の予約分
+
+function targetFontSize(len) {
+  return clamp(MAX_FONT_SIZE - Math.sqrt(len) * 1.1, MIN_FONT_SIZE, MAX_FONT_SIZE);
 }
 
-function computeFontSize(text, diameter) {
-  const len = text.length;
-  let size = diameter / 7.2;
-  if (len > 20) size *= 0.9;
-  if (len > 40) size *= 0.82;
-  return clamp(size, 13, 26);
+// (inscribed - padX) * (inscribed - padY) >= areaNeeded を満たす最小のinscribedを解の公式で求める。
+function inscribedSideFor(areaNeeded, padX, padY) {
+  const sum = padX + padY;
+  const diff = padX - padY;
+  return (sum + Math.sqrt(diff * diff + 4 * areaNeeded)) / 2;
+}
+
+function diameterForFit(len, fontSize, hasStats) {
+  const padY = hasStats ? BUBBLE_PAD_Y_STATS : BUBBLE_PAD_Y_BASE;
+  const areaNeeded = fontSize * fontSize * LINE_HEIGHT_RATIO * FIT_SAFETY * Math.max(len, 1);
+  const inscribed = inscribedSideFor(areaNeeded, BUBBLE_PAD_X, padY);
+  return inscribed * Math.SQRT2;
+}
+
+function fontSizeForDiameter(len, diameter, hasStats) {
+  const padY = hasStats ? BUBBLE_PAD_Y_STATS : BUBBLE_PAD_Y_BASE;
+  const inscribed = diameter / Math.SQRT2;
+  const contentW = Math.max(inscribed - BUBBLE_PAD_X, 20);
+  const contentH = Math.max(inscribed - padY, 20);
+  return Math.sqrt((contentW * contentH) / (Math.max(len, 1) * LINE_HEIGHT_RATIO * FIT_SAFETY));
+}
+
+function computeBubbleMetrics(text, replyCount, likes) {
+  const len = Math.min(text.length, MAX_COMMENT_LENGTH);
+  const hasStats = replyCount > 0 || likes > 0;
+  const target = targetFontSize(len);
+  const idealDiameter = diameterForFit(len, target, hasStats);
+  const diameter = clamp(idealDiameter, MIN_DIAMETER, MAX_DIAMETER);
+  let fontSize = target;
+  if (diameter < idealDiameter) {
+    // 上限直径では理想フォントで収まりきらない場合、実直径から逆算してさらに縮小する。
+    fontSize = clamp(fontSizeForDiameter(len, diameter, hasStats), 10, MAX_FONT_SIZE);
+  }
+  return { diameter, fontSize };
 }
 
 export class CloudField {
@@ -76,7 +115,6 @@ export class CloudField {
     this.container = container;
     this.onOpenThread = handlers.onOpenThread;
     this.onRequestDelete = handlers.onRequestDelete;
-    this.onLike = handlers.onLike;
     this.clouds = new Map();
     this.simCache = new Map();
     this.bounds = { width: window.innerWidth, height: window.innerHeight };
@@ -143,7 +181,7 @@ export class CloudField {
     const cloud = this.clouds.get(cloudId);
     if (!cloud) return null;
     cloud.likes = (cloud.likes || 0) + 1;
-    this._applyBadges(cloud);
+    this._resize(cloud);
     return cloud.likes;
   }
 
@@ -185,16 +223,18 @@ export class CloudField {
   _createCloud(data, { spawnAnim }) {
     const bigrams = toBigramMap(data.text);
     const replies = data.replies || [];
-    const d = computeDiameter(data.text, replies.length);
+    const initialLikes = typeof data.likes === "number" ? data.likes : 0;
+    const metrics = computeBubbleMetrics(data.text, replies.length, initialLikes);
     const state = {
       id: data.id,
       text: data.text,
       createdAt: data.createdAt,
       replies,
-      likes: typeof data.likes === "number" ? data.likes : 0,
+      likes: initialLikes,
       bigrams,
-      d,
-      r: d / 2,
+      d: metrics.diameter,
+      r: metrics.diameter / 2,
+      fontSize: metrics.fontSize,
       x: typeof data.x === "number" ? data.x : this.bounds.width / 2 + (Math.random() - 0.5) * 200,
       y: typeof data.y === "number" ? data.y : this.bounds.height / 2 + (Math.random() - 0.5) * 200,
       vx: 0,
@@ -229,34 +269,26 @@ export class CloudField {
     textEl.textContent = data.text;
     bubble.appendChild(textEl);
 
+    // コメント数といいね数はバブル内に収まるよう、テキスト下の専用行にまとめる。
+    const stats = document.createElement("div");
+    stats.className = "cloud-stats";
+
     const badge = document.createElement("span");
     badge.className = "cloud-badge";
     const badgeCount = document.createElement("span");
     badgeCount.className = "badge-count";
     badge.append("💬 ", badgeCount);
-    bubble.appendChild(badge);
+    stats.appendChild(badge);
 
-    const likeBtn = document.createElement("button");
-    likeBtn.className = "cloud-like";
-    likeBtn.type = "button";
-    likeBtn.setAttribute("aria-label", "いいね");
-    const likeIcon = document.createElement("span");
-    likeIcon.className = "like-icon";
-    likeIcon.textContent = "👍";
-    const likeCount = document.createElement("span");
-    likeCount.className = "like-count";
-    likeBtn.appendChild(likeIcon);
-    likeBtn.appendChild(likeCount);
-    likeBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      this.likeCloud(state.id);
-      likeBtn.classList.remove("liked-pop");
-      // force reflow so the animation can restart on repeated clicks
-      void likeBtn.offsetWidth;
-      likeBtn.classList.add("liked-pop");
-      this.onLike && this.onLike(state.id);
-    });
-    bubble.appendChild(likeBtn);
+    // いいねは一覧の雲では押せない(スレッド画面のみ)。0件のときはアイコンごと非表示。
+    const likeBadge = document.createElement("span");
+    likeBadge.className = "cloud-like-badge";
+    const likeBadgeCount = document.createElement("span");
+    likeBadgeCount.className = "like-badge-count";
+    likeBadge.append("👍 ", likeBadgeCount);
+    stats.appendChild(likeBadge);
+
+    bubble.appendChild(stats);
 
     const deleteBtn = document.createElement("button");
     deleteBtn.className = "cloud-delete";
@@ -291,7 +323,7 @@ export class CloudField {
     let dragStartY = 0;
 
     bubble.addEventListener("pointerdown", (event) => {
-      if (event.target.closest(".cloud-delete") || event.target.closest(".cloud-like")) return;
+      if (event.target.closest(".cloud-delete")) return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
       state.dragging = true;
       state.dragPointerId = event.pointerId;
@@ -335,10 +367,11 @@ export class CloudField {
     state.el = bubble;
     state.anchorEl = anchor;
     state.textEl = textEl;
+    state.statsEl = stats;
     state.badgeEl = badge;
     state.badgeCountEl = badgeCount;
-    state.likeBtn = likeBtn;
-    state.likeCountEl = likeCount;
+    state.likeBadgeEl = likeBadge;
+    state.likeBadgeCountEl = likeBadgeCount;
 
     this._applySize(state);
     this._applyBadges(state);
@@ -349,15 +382,17 @@ export class CloudField {
   }
 
   _resize(cloud) {
-    cloud.d = computeDiameter(cloud.text, cloud.replies.length);
-    cloud.r = cloud.d / 2;
+    const metrics = computeBubbleMetrics(cloud.text, cloud.replies.length, cloud.likes || 0);
+    cloud.d = metrics.diameter;
+    cloud.r = metrics.diameter / 2;
+    cloud.fontSize = metrics.fontSize;
     this._applySize(cloud);
     this._applyBadges(cloud);
   }
 
   _applySize(cloud) {
     cloud.el.style.setProperty("--d", `${cloud.d}px`);
-    cloud.el.style.fontSize = `${computeFontSize(cloud.text, cloud.d).toFixed(1)}px`;
+    cloud.el.style.fontSize = `${cloud.fontSize.toFixed(1)}px`;
   }
 
   _applyBadges(cloud) {
@@ -370,12 +405,12 @@ export class CloudField {
     }
     const likes = cloud.likes || 0;
     if (likes > 0) {
-      cloud.likeCountEl.textContent = String(likes);
-      cloud.likeCountEl.classList.add("visible");
+      cloud.likeBadgeEl.classList.add("visible");
+      cloud.likeBadgeCountEl.textContent = String(likes);
     } else {
-      cloud.likeCountEl.textContent = "";
-      cloud.likeCountEl.classList.remove("visible");
+      cloud.likeBadgeEl.classList.remove("visible");
     }
+    cloud.statsEl.classList.toggle("visible", count > 0 || likes > 0);
   }
 
   _applyTransform(cloud) {
