@@ -242,7 +242,7 @@ export class CloudField {
     likeBtn.setAttribute("aria-label", "いいね");
     const likeIcon = document.createElement("span");
     likeIcon.className = "like-icon";
-    likeIcon.textContent = "🤍";
+    likeIcon.textContent = "👍";
     const likeCount = document.createElement("span");
     likeCount.className = "like-count";
     likeBtn.appendChild(likeIcon);
@@ -368,7 +368,14 @@ export class CloudField {
     } else {
       cloud.badgeEl.classList.remove("visible");
     }
-    cloud.likeCountEl.textContent = String(cloud.likes || 0);
+    const likes = cloud.likes || 0;
+    if (likes > 0) {
+      cloud.likeCountEl.textContent = String(likes);
+      cloud.likeCountEl.classList.add("visible");
+    } else {
+      cloud.likeCountEl.textContent = "";
+      cloud.likeCountEl.classList.remove("visible");
+    }
   }
 
   _applyTransform(cloud) {

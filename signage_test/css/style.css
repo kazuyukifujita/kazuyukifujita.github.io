@@ -313,6 +313,15 @@ input {
   animation: like-pop 0.28s ease;
 }
 
+/* いいね数は0件のときは数字を表示せずアイコンのみにする */
+.like-count {
+  display: none;
+}
+
+.like-count.visible {
+  display: inline;
+}
+
 @keyframes like-pop {
   0% { transform: scale(1); }
   45% { transform: scale(1.35); }

@@ -7,6 +7,17 @@ function formatTime(ts) {
   return `${hh}:${mm}`;
 }
 
+// いいね0件のときは数字を表示せずアイコンのみにする
+function applyLikeCount(el, likes) {
+  if (likes > 0) {
+    el.textContent = String(likes);
+    el.classList.add("visible");
+  } else {
+    el.textContent = "";
+    el.classList.remove("visible");
+  }
+}
+
 export class ThreadModal {
   /**
    * @param {{onReply: (cloudId: string, text: string) => void, onDeleteReply: (cloudId: string, replyId: string) => void, onDeleteRoot: (cloudId: string) => void, onLikeRoot: (cloudId: string) => void, onLikeReply: (cloudId: string, replyId: string) => void}} handlers
@@ -55,7 +66,7 @@ export class ThreadModal {
     this.currentCloudId = cloud.id;
     this.rootTextEl.textContent = cloud.text;
     this.rootTimeEl.textContent = formatTime(cloud.createdAt);
-    this.rootLikeCountEl.textContent = String(cloud.likes || 0);
+    applyLikeCount(this.rootLikeCountEl, cloud.likes || 0);
     this._renderReplies(cloud);
     this.overlay.classList.remove("hidden");
     this.replyInput.value = "";
@@ -64,7 +75,7 @@ export class ThreadModal {
 
   refresh(cloud) {
     if (this.currentCloudId !== cloud.id) return;
-    this.rootLikeCountEl.textContent = String(cloud.likes || 0);
+    applyLikeCount(this.rootLikeCountEl, cloud.likes || 0);
     this._renderReplies(cloud);
   }
 
@@ -99,10 +110,14 @@ export class ThreadModal {
       likeBtn.className = "reply-like";
       likeBtn.type = "button";
       likeBtn.setAttribute("aria-label", "この返信にいいね");
+      const likeIconEl = document.createElement("span");
+      likeIconEl.className = "like-icon";
+      likeIconEl.textContent = "👍";
       const likeCountEl = document.createElement("span");
-      likeCountEl.className = "reply-like-count";
-      likeCountEl.textContent = String(reply.likes || 0);
-      likeBtn.append("🤍 ", likeCountEl);
+      likeCountEl.className = "like-count";
+      applyLikeCount(likeCountEl, reply.likes || 0);
+      likeBtn.appendChild(likeIconEl);
+      likeBtn.appendChild(likeCountEl);
       likeBtn.addEventListener("click", () => {
         this.handlers.onLikeReply(cloud.id, reply.id);
       });
