@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Air Hockey">
 <title>Neon Air Hockey</title>
 <style>
   :root{
@@ -235,6 +239,9 @@
       </div>
 
       <button id="startBtn" class="primary" style="margin-top:8px;">ゲーム開始</button>
+
+      <button id="fsBtn" class="ghost" style="font-size:12px; padding:8px 16px;">全画面表示にする</button>
+      <div class="group-note" style="margin-top:-14px;">Chromeでアドレスバーを消したい場合はこちら。最も確実なのはSafariで開き「ホーム画面に追加」する方法です</div>
     </div>
   </div>
 
@@ -359,9 +366,10 @@
 
   var puck = {
     x:0, y:0, vx:0, vy:0, r:20,
-    minSpeed: 5.2, baseMinSpeed: 5.2, maxMinSpeed: 9.5,
+    minSpeed: 3.4, baseMinSpeed: 3.4, maxMinSpeed: 9.5,
     maxSpeed: 22,
-    rallyTime: 0
+    rallyTime: 0,
+    rallyHits: 0
   };
 
   var cpu = {
@@ -436,11 +444,13 @@
 
     puck.x = field.midX;
     puck.y = field.midYSafe();
+    puck.minSpeed = puck.baseMinSpeed; // start each point at the slow serve speed
+    puck.rallyTime = 0;
+    puck.rallyHits = 0;
     var dir = servingSide === 'right' ? 1 : -1;
     var ang = (Math.random()*0.6 - 0.3);
     puck.vx = Math.cos(ang) * puck.minSpeed * dir;
     puck.vy = Math.sin(ang) * puck.minSpeed;
-    puck.rallyTime = 0;
   }
   field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
 
@@ -637,6 +647,7 @@
       // push puck out
       var overlap = minDist - dist;
       puck.x += nx*overlap; puck.y += ny*overlap;
+      puck.rallyHits++; // each exchange nudges the rally-speed ramp forward
 
       // relative velocity
       var rvx = puck.vx - m.vx, rvy = puck.vy - m.vy;
@@ -707,9 +718,13 @@
     resolveMalletCollision(mallet.left);
     resolveMalletCollision(mallet.right);
 
-    // gradually raise min speed over rally to avoid stalling
+    // gradually raise min speed as the rally goes on — mostly driven by how
+    // many times the puck has been hit, with a slow time-based nudge too so
+    // long wall-bounce rallies without a hit still creep up a little.
     puck.rallyTime += dt;
-    var t = Math.min(1, puck.rallyTime / 20);
+    var timeT = Math.min(1, puck.rallyTime / 30);
+    var hitT = Math.min(1, puck.rallyHits / 10);
+    var t = Math.max(timeT, hitT);
     puck.minSpeed = puck.baseMinSpeed + (puck.maxMinSpeed - puck.baseMinSpeed) * t;
     var curSpeed = Math.hypot(puck.vx, puck.vy);
     if (curSpeed < puck.minSpeed && curSpeed > 0.001){
@@ -972,8 +987,39 @@
   selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
   selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
 
+  /* ---------------------------------------------------------
+     FULLSCREEN
+     iOS Safari (with "Add to Home Screen") hides all browser
+     chrome automatically. Chrome on iPad cannot remove its
+     address bar permanently, but the Fullscreen API — where
+     supported — hides it while this page is in the foreground.
+  --------------------------------------------------------- */
+  function tryFullscreen(){
+    var el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+    if (req){
+      try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
+    }
+  }
+  function exitFullscreen(){
+    var exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (exit && (document.fullscreenElement || document.webkitFullscreenElement)){
+      try{ exit.call(document); }catch(e){}
+    }
+  }
+  document.getElementById('fsBtn').addEventListener('click', function(){
+    sndClick(); ensureAudio();
+    if (document.fullscreenElement || document.webkitFullscreenElement){
+      exitFullscreen();
+    } else {
+      tryFullscreen();
+    }
+  });
+
   document.getElementById('startBtn').addEventListener('click', function(){
     ensureAudio(); sndClick();
+    tryFullscreen();
     startGame();
   });
 
