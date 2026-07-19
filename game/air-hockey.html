@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Neon Air Hockey</title>
+<style>
+  :root{
+    --neon-cyan:#00f6ff;
+    --neon-magenta:#ff2bd6;
+    --neon-yellow:#ffe100;
+    --bg:#050414;
+  }
+  *{ box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg); overflow:hidden;
+    font-family:-apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+    touch-action:none;
+  }
+  #stage{ position:fixed; inset:0; }
+  canvas{ position:absolute; inset:0; display:block; width:100%; height:100%; }
+
+  .glow-text{
+    color:#fff;
+    text-shadow:0 0 6px var(--neon-cyan), 0 0 16px var(--neon-cyan), 0 0 2px #fff;
+    letter-spacing:2px;
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(2,2,16,0.86);
+    z-index:10;
+  }
+  .hidden{ display:none !important; }
+
+  .panel{
+    display:flex; flex-direction:column; align-items:center; gap:22px;
+    max-width:640px; width:90%;
+    padding:28px;
+  }
+
+  .title{
+    font-size:clamp(28px,6vw,48px);
+    font-weight:800; margin:0 0 6px 0; text-align:center;
+    color:#fff;
+    text-shadow:0 0 8px var(--neon-magenta), 0 0 22px var(--neon-magenta), 0 0 2px #fff;
+  }
+  .subtitle{
+    font-size:clamp(12px,2.4vw,16px);
+    color:#8fe8ff; opacity:0.85; margin-top:-10px; text-align:center;
+  }
+
+  .group{
+    width:100%;
+    display:flex; flex-direction:column; gap:10px; align-items:center;
+  }
+  .group-label{
+    font-size:13px; color:var(--neon-cyan); letter-spacing:3px; text-transform:uppercase;
+    opacity:0.85;
+  }
+  .group-note{
+    font-size:11px; color:#9fd; opacity:0.6; margin-top:-6px; text-align:center;
+  }
+  .row{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; width:100%; align-items:center; }
+  .row-tag{
+    font-size:12px; color:#8fe8ff; opacity:0.85; min-width:52px; text-align:right;
+  }
+
+  button{
+    font-family:inherit; cursor:pointer;
+    border-radius:14px;
+    padding:14px 22px;
+    font-size:15px; font-weight:700;
+    color:#eafcff;
+    background:rgba(0,246,255,0.06);
+    border:1.5px solid rgba(0,246,255,0.55);
+    box-shadow:0 0 10px rgba(0,246,255,0.25) inset, 0 0 14px rgba(0,246,255,0.18);
+    transition:transform .08s ease, background .15s ease, box-shadow .15s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button:active{ transform:scale(0.95); }
+  button.selected{
+    background:rgba(0,246,255,0.22);
+    box-shadow:0 0 14px rgba(0,246,255,0.55) inset, 0 0 26px rgba(0,246,255,0.5);
+    border-color:#fff;
+  }
+  button.primary{
+    background:rgba(255,43,214,0.12);
+    border-color:rgba(255,43,214,0.7);
+    box-shadow:0 0 14px rgba(255,43,214,0.3) inset, 0 0 18px rgba(255,43,214,0.25);
+    padding:16px 36px; font-size:17px;
+  }
+  button.primary.selected{
+    background:rgba(255,43,214,0.28);
+    box-shadow:0 0 16px rgba(255,43,214,0.6) inset, 0 0 30px rgba(255,43,214,0.55);
+  }
+  button.ghost{
+    background:transparent; border-color:rgba(255,255,255,0.35); color:#cfeaff;
+    box-shadow:none;
+  }
+  button:disabled{ opacity:0.3; pointer-events:none; }
+
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top)) 18px 0 18px;
+    z-index:5; pointer-events:none;
+  }
+  #hud > *{ pointer-events:auto; }
+  .score{
+    font-size:clamp(30px,7vw,54px); font-weight:800; min-width:60px; text-align:center;
+  }
+  .score.left{ color:#fff; text-shadow:0 0 8px var(--neon-cyan),0 0 20px var(--neon-cyan); }
+  .score.right{ color:#fff; text-shadow:0 0 8px var(--neon-magenta),0 0 20px var(--neon-magenta); }
+  .score-wrap{ display:flex; align-items:center; gap:14px; }
+  .score-tag{ font-size:11px; opacity:0.7; letter-spacing:2px; color:#9fd; text-align:center; }
+  #targetInfo{
+    align-self:center; font-size:13px; color:#9fe8ff; opacity:0.75; letter-spacing:1px;
+  }
+  #pauseBtn{
+    width:44px; height:44px; border-radius:50%; padding:0;
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+  }
+
+  .end-title{ font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="score-wrap">
+      <div>
+        <div class="score-tag" id="tagLeft">PLAYER 1</div>
+        <div class="score left" id="scoreLeft">0</div>
+      </div>
+    </div>
+    <div id="targetInfo"></div>
+    <div class="score-wrap">
+      <div>
+        <div class="score-tag" id="tagRight">PLAYER 2</div>
+        <div class="score right" id="scoreRight">0</div>
+      </div>
+      <button id="pauseBtn" class="ghost">⏸</button>
+    </div>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <div class="title">NEON AIR HOCKEY</div>
+      <div class="subtitle">iPadを横向きにして、2本指(またはお2人)でどうぞ</div>
+
+      <div class="group">
+        <div class="group-label">モード</div>
+        <div class="row">
+          <button id="modeCpu" class="mode-btn selected" data-mode="cpu">CPU対戦</button>
+          <button id="mode2p" class="mode-btn" data-mode="2p">2人対戦</button>
+        </div>
+      </div>
+
+      <div class="group" id="diffGroup">
+        <div class="group-label">CPUの強さ</div>
+        <div class="row">
+          <button id="diffEasy" class="diff-btn" data-diff="easy">弱い</button>
+          <button id="diffNormal" class="diff-btn selected" data-diff="normal">普通</button>
+          <button id="diffHard" class="diff-btn" data-diff="hard">強い</button>
+        </div>
+      </div>
+
+      <div class="group" id="goalGroup" style="opacity:0.3;pointer-events:none;">
+        <div class="group-label">ゴールの大きさ(ハンディキャップ)</div>
+        <div class="group-note">小=守りやすい(有利)　大=守りにくい(不利)</div>
+        <div class="row">
+          <span class="row-tag">P1(左)</span>
+          <button class="goalL-btn" data-goal="small">小</button>
+          <button class="goalL-btn selected" data-goal="normal">中</button>
+          <button class="goalL-btn" data-goal="large">大</button>
+        </div>
+        <div class="row">
+          <span class="row-tag">P2(右)</span>
+          <button class="goalR-btn" data-goal="small">小</button>
+          <button class="goalR-btn selected" data-goal="normal">中</button>
+          <button class="goalR-btn" data-goal="large">大</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">先取点数</div>
+        <div class="row">
+          <button id="score5" class="target-btn" data-target="5">5点</button>
+          <button id="score7" class="target-btn selected" data-target="7">7点</button>
+          <button id="score11" class="target-btn" data-target="11">11点</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">サウンド</div>
+        <div class="row">
+          <button id="soundOn" class="sound-btn selected" data-sound="on">ON</button>
+          <button id="soundOff" class="sound-btn" data-sound="off">OFF</button>
+        </div>
+      </div>
+
+      <button id="startBtn" class="primary" style="margin-top:8px;">ゲーム開始</button>
+    </div>
+  </div>
+
+  <!-- PAUSE -->
+  <div id="pauseOverlay" class="overlay hidden">
+    <div class="panel">
+      <div class="title" style="font-size:32px;">一時停止</div>
+      <div class="row">
+        <button id="resumeBtn" class="primary">再開</button>
+        <button id="quitBtn" class="ghost">メニューに戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div id="endOverlay" class="overlay hidden">
+    <div class="panel">
+      <div class="end-title glow-text" id="endTitle">PLAYER 1 WINS</div>
+      <div class="subtitle" id="endScore"></div>
+      <div class="row" style="margin-top:10px;">
+        <button id="rematchBtn" class="primary">もう一度</button>
+        <button id="menuBtn" class="ghost">メニューに戻る</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------------
+     CANVAS / RESIZE
+  --------------------------------------------------------- */
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var W = 0, H = 0, DPR = 1;
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    layoutField();
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function(){ setTimeout(resize, 250); });
+
+  /* ---------------------------------------------------------
+     FIELD GEOMETRY
+  --------------------------------------------------------- */
+  var field = {};
+  function layoutField(){
+    var margin = Math.min(W,H) * 0.03;
+    field.left = margin;
+    field.right = W - margin;
+    field.top = margin + 10;
+    field.bottom = H - margin;
+    field.midX = (field.left + field.right) / 2;
+    field.w = field.right - field.left;
+    field.h = field.bottom - field.top;
+    var goalHeightBase = field.h * 0.34;
+    var midY = (field.top + field.bottom) / 2;
+    var glMul = GOAL_SIZE[settings.goalSizeLeft] || 1;
+    var grMul = GOAL_SIZE[settings.goalSizeRight] || 1;
+    field.goalHeightLeft = goalHeightBase * glMul;
+    field.goalHeightRight = goalHeightBase * grMul;
+    field.goalTopLeft = midY - field.goalHeightLeft/2;
+    field.goalBottomLeft = midY + field.goalHeightLeft/2;
+    field.goalTopRight = midY - field.goalHeightRight/2;
+    field.goalBottomRight = midY + field.goalHeightRight/2;
+
+    var scale = Math.min(field.w, field.h);
+    mallet.r = scale * 0.052;
+    puck.r = mallet.r * 0.55;
+
+    // clamp bounds for each player's mallet (their half, inset by radius)
+    field.leftBounds = {
+      minX: field.left + mallet.r, maxX: field.midX - mallet.r,
+      minY: field.top + mallet.r, maxY: field.bottom - mallet.r
+    };
+    field.rightBounds = {
+      minX: field.midX + mallet.r, maxX: field.right - mallet.r,
+      minY: field.top + mallet.r, maxY: field.bottom - mallet.r
+    };
+  }
+
+  /* ---------------------------------------------------------
+     STATE
+  --------------------------------------------------------- */
+  var STATE_MENU='menu', STATE_PLAY='play', STATE_PAUSE='pause', STATE_END='end';
+  var state = STATE_MENU;
+
+  var settings = {
+    mode: 'cpu',      // 'cpu' | '2p'
+    difficulty: 'normal',
+    target: 7,
+    sound: true,
+    goalSizeLeft: 'normal',   // 'small' | 'normal' | 'large' (2P handicap only)
+    goalSizeRight: 'normal'
+  };
+
+  var DIFF = {
+    easy:   { maxSpeed: 4.2, reaction: 0.30, error: 46, aggressiveness: 0.45 },
+    normal: { maxSpeed: 7.2, reaction: 0.14, error: 20, aggressiveness: 0.65 },
+    hard:   { maxSpeed: 11.5, reaction: 0.05, error: 7,  aggressiveness: 0.85 }
+  };
+
+  var GOAL_SIZE = { small: 0.7, normal: 1.0, large: 1.35 };
+
+  var score = { left:0, right:0 };
+
+  var mallet = {
+    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false },
+    right: { x:0, y:0, vx:0, vy:0, r:40, active:false }
+  };
+  var touchMap = {}; // touchId -> 'left' | 'right'
+
+  var puck = {
+    x:0, y:0, vx:0, vy:0, r:20,
+    minSpeed: 5.2, baseMinSpeed: 5.2, maxMinSpeed: 9.5,
+    maxSpeed: 22,
+    rallyTime: 0
+  };
+
+  var cpu = {
+    targetY: 0,
+    lastDecision: 0,
+    mode: 'defend' // 'defend' | 'attack'
+  };
+
+  /* ---------------------------------------------------------
+     AUDIO
+  --------------------------------------------------------- */
+  var actx = null;
+  function ensureAudio(){
+    if (!settings.sound) return;
+    if (!actx){
+      try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx=null; }
+    } else if (actx.state === 'suspended'){
+      actx.resume();
+    }
+  }
+  function blip(freq, dur, type, vol){
+    if (!settings.sound || !actx) return;
+    var t0 = actx.currentTime;
+    var osc = actx.createOscillator();
+    var gain = actx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*0.6), t0+dur);
+    gain.gain.setValueAtTime((vol!==undefined?vol:0.18), t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t0); osc.stop(t0+dur);
+  }
+  function sndWall(){ blip(320,0.08,'triangle',0.12); }
+  function sndHit(spd){ blip(180+Math.min(spd,20)*20,0.09,'square',0.16); }
+  function sndGoal(){ blip(660,0.35,'sawtooth',0.22); setTimeout(function(){blip(880,0.3,'sawtooth',0.18);},90); }
+  function sndClick(){ blip(500,0.05,'sine',0.1); }
+
+  /* ---------------------------------------------------------
+     RESET / START
+  --------------------------------------------------------- */
+  function resetPositions(servingSide){
+    mallet.left.x = field.left + field.w*0.15;
+    mallet.left.y = field.midYSafe();
+    mallet.right.x = field.right - field.w*0.15;
+    mallet.right.y = field.midYSafe();
+    mallet.left.vx = mallet.left.vy = 0;
+    mallet.right.vx = mallet.right.vy = 0;
+
+    puck.x = field.midX;
+    puck.y = field.midYSafe();
+    var dir = servingSide === 'right' ? 1 : -1;
+    var ang = (Math.random()*0.6 - 0.3);
+    puck.vx = Math.cos(ang) * puck.minSpeed * dir;
+    puck.vy = Math.sin(ang) * puck.minSpeed;
+    puck.rallyTime = 0;
+  }
+  field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
+
+  function startGame(){
+    score.left = 0; score.right = 0;
+    updateScoreDisplay();
+    document.getElementById('tagLeft').textContent = 'PLAYER 1';
+    document.getElementById('tagRight').textContent = settings.mode==='cpu' ? 'CPU' : 'PLAYER 2';
+    document.getElementById('targetInfo').textContent = settings.target + '点先取';
+    resize();
+    resetPositions(Math.random() < 0.5 ? 'left':'right');
+    state = STATE_PLAY;
+    show('play');
+    lastT = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function updateScoreDisplay(){
+    document.getElementById('scoreLeft').textContent = score.left;
+    document.getElementById('scoreRight').textContent = score.right;
+  }
+
+  function show(which){
+    document.getElementById('menu').classList.toggle('hidden', which!=='menu');
+    document.getElementById('pauseOverlay').classList.toggle('hidden', which!=='pause');
+    document.getElementById('endOverlay').classList.toggle('hidden', which!=='end');
+    document.getElementById('hud').classList.toggle('hidden', which==='menu');
+  }
+
+  /* ---------------------------------------------------------
+     INPUT — MULTITOUCH
+  --------------------------------------------------------- */
+  function clampTo(bounds, x, y){
+    return {
+      x: Math.min(bounds.maxX, Math.max(bounds.minX, x)),
+      y: Math.min(bounds.maxY, Math.max(bounds.minY, y))
+    };
+  }
+
+  function assignTouch(id, x){
+    if (settings.mode === 'cpu'){
+      return 'left'; // human always controls left mallet
+    }
+    return x < field.midX ? 'left' : 'right';
+  }
+
+  canvas.addEventListener('touchstart', function(e){
+    if (state !== STATE_PLAY) return;
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    for (var i=0;i<e.changedTouches.length;i++){
+      var t = e.changedTouches[i];
+      var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      var side = assignTouch(t.identifier, x);
+      if (side === 'right' && settings.mode === 'cpu') continue;
+      if (touchMap[side] !== undefined) continue; // side already controlled by another finger
+      touchMap[side] = t.identifier;
+      mallet[side].active = true;
+      var b = side==='left' ? field.leftBounds : field.rightBounds;
+      var p = clampTo(b, x, y);
+      mallet[side].x = p.x; mallet[side].y = p.y;
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('touchmove', function(e){
+    if (state !== STATE_PLAY) return;
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    for (var i=0;i<e.changedTouches.length;i++){
+      var t = e.changedTouches[i];
+      var side = null;
+      for (var k in touchMap){ if (touchMap[k]===t.identifier) side = k; }
+      if (!side) continue;
+      var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      var b = side==='left' ? field.leftBounds : field.rightBounds;
+      var p = clampTo(b, x, y);
+      var m = mallet[side];
+      m.vx = p.x - m.x; m.vy = p.y - m.y;
+      m.x = p.x; m.y = p.y;
+    }
+  }, {passive:false});
+
+  function releaseTouch(e){
+    for (var i=0;i<e.changedTouches.length;i++){
+      var t = e.changedTouches[i];
+      for (var k in touchMap){
+        if (touchMap[k] === t.identifier){
+          delete touchMap[k];
+          mallet[k].active = false;
+          mallet[k].vx = 0; mallet[k].vy = 0;
+        }
+      }
+    }
+  }
+  canvas.addEventListener('touchend', releaseTouch, {passive:false});
+  canvas.addEventListener('touchcancel', releaseTouch, {passive:false});
+
+  // Mouse fallback (desktop testing)
+  var mouseSide = null;
+  canvas.addEventListener('mousedown', function(e){
+    if (state !== STATE_PLAY) return;
+    var rect = canvas.getBoundingClientRect();
+    var x = e.clientX-rect.left, y = e.clientY-rect.top;
+    mouseSide = assignTouch(0, x);
+    if (mouseSide==='right' && settings.mode==='cpu'){ mouseSide=null; return; }
+    mallet[mouseSide].active = true;
+  });
+  canvas.addEventListener('mousemove', function(e){
+    if (!mouseSide || state !== STATE_PLAY) return;
+    var rect = canvas.getBoundingClientRect();
+    var x = e.clientX-rect.left, y = e.clientY-rect.top;
+    var b = mouseSide==='left'?field.leftBounds:field.rightBounds;
+    var p = clampTo(b,x,y);
+    var m = mallet[mouseSide];
+    m.vx = p.x-m.x; m.vy=p.y-m.y;
+    m.x = p.x; m.y = p.y;
+  });
+  window.addEventListener('mouseup', function(){
+    if (mouseSide){ mallet[mouseSide].active=false; mallet[mouseSide].vx=0; mallet[mouseSide].vy=0; }
+    mouseSide = null;
+  });
+
+  /* ---------------------------------------------------------
+     CPU AI
+  --------------------------------------------------------- */
+  function predictPuckYAtX(targetX){
+    var x = puck.x, y = puck.y, vx = puck.vx, vy = puck.vy;
+    if (Math.abs(vx) < 0.01) return y;
+    var steps = 0;
+    while (((vx>0 && x < targetX) || (vx<0 && x > targetX)) && steps < 400){
+      x += vx; y += vy;
+      if (y < field.top + puck.r){ y = field.top+puck.r + (field.top+puck.r-y); vy = -vy; }
+      if (y > field.bottom - puck.r){ y = field.bottom-puck.r - (y-(field.bottom-puck.r)); vy = -vy; }
+      steps++;
+    }
+    return y;
+  }
+
+  function updateCPU(dt){
+    var d = DIFF[settings.difficulty];
+    var m = mallet.right;
+    var homeX = field.right - field.w*0.15;
+
+    cpu.lastDecision -= dt;
+    if (cpu.lastDecision <= 0){
+      cpu.lastDecision = d.reaction;
+      if (puck.vx > 0){
+        // puck heading toward CPU: predict intercept
+        var predY = predictPuckYAtX(m.x);
+        predY += (Math.random()*2-1) * d.error;
+        cpu.targetY = predY;
+        cpu.mode = 'attack';
+      } else {
+        cpu.mode = 'defend';
+        cpu.targetY = field.midYSafe() + (Math.random()*2-1) * d.error * 0.5;
+      }
+    }
+
+    var targetX = homeX;
+    if (cpu.mode === 'attack' && puck.vx > 0){
+      // move forward to meet puck if it's on CPU's side and close
+      if (puck.x > field.midX){
+        targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, puck.x - puck.r - m.r*0.2));
+      }
+    }
+    var targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, cpu.targetY));
+
+    var dx = targetX - m.x, dy = targetY - m.y;
+    var dist = Math.hypot(dx,dy);
+    var speed = d.maxSpeed;
+    if (dist > 0.01){
+      var step = Math.min(dist, speed);
+      var nvx = dx/dist*step, nvy = dy/dist*step;
+      m.vx = nvx; m.vy = nvy;
+      m.x += nvx; m.y += nvy;
+    } else {
+      m.vx = 0; m.vy = 0;
+    }
+    var b = field.rightBounds;
+    m.x = Math.min(b.maxX, Math.max(b.minX, m.x));
+    m.y = Math.min(b.maxY, Math.max(b.minY, m.y));
+  }
+
+  /* ---------------------------------------------------------
+     PHYSICS
+  --------------------------------------------------------- */
+  function resolveMalletCollision(m){
+    var dx = puck.x - m.x, dy = puck.y - m.y;
+    var dist = Math.hypot(dx,dy);
+    var minDist = puck.r + m.r;
+    if (dist < minDist && dist > 0.0001){
+      var nx = dx/dist, ny = dy/dist;
+      // push puck out
+      var overlap = minDist - dist;
+      puck.x += nx*overlap; puck.y += ny*overlap;
+
+      // relative velocity
+      var rvx = puck.vx - m.vx, rvy = puck.vy - m.vy;
+      var relSpeed = rvx*nx + rvy*ny;
+      if (relSpeed < 0){
+        var restitution = 1.05;
+        puck.vx -= (1+restitution) * relSpeed * nx;
+        puck.vy -= (1+restitution) * relSpeed * ny;
+      }
+      // add a bit of mallet's own motion as extra kick
+      puck.vx += m.vx * 0.35;
+      puck.vy += m.vy * 0.35;
+
+      var spd = Math.hypot(puck.vx, puck.vy);
+      if (spd > puck.maxSpeed){
+        puck.vx = puck.vx/spd*puck.maxSpeed;
+        puck.vy = puck.vy/spd*puck.maxSpeed;
+      }
+      sndHit(spd);
+    }
+  }
+
+  function stepPuck(dt){
+    var steps = 2; // sub-steps for stability
+    for (var s=0;s<steps;s++){
+      puck.x += puck.vx/steps;
+      puck.y += puck.vy/steps;
+
+      // top/bottom walls
+      if (puck.y - puck.r < field.top){
+        puck.y = field.top + puck.r;
+        puck.vy = -puck.vy;
+        sndWall();
+      } else if (puck.y + puck.r > field.bottom){
+        puck.y = field.bottom - puck.r;
+        puck.vy = -puck.vy;
+        sndWall();
+      }
+
+      // left wall / goal
+      if (puck.x - puck.r < field.left){
+        if (puck.y > field.goalTopLeft + puck.r*0.3 && puck.y < field.goalBottomLeft - puck.r*0.3){
+          if (puck.x + puck.r < field.left - 4){
+            handleGoal('right');
+            return;
+          }
+        } else {
+          puck.x = field.left + puck.r;
+          puck.vx = -puck.vx;
+          sndWall();
+        }
+      }
+      // right wall / goal
+      if (puck.x + puck.r > field.right){
+        if (puck.y > field.goalTopRight + puck.r*0.3 && puck.y < field.goalBottomRight - puck.r*0.3){
+          if (puck.x - puck.r > field.right + 4){
+            handleGoal('left');
+            return;
+          }
+        } else {
+          puck.x = field.right - puck.r;
+          puck.vx = -puck.vx;
+          sndWall();
+        }
+      }
+    }
+
+    resolveMalletCollision(mallet.left);
+    resolveMalletCollision(mallet.right);
+
+    // gradually raise min speed over rally to avoid stalling
+    puck.rallyTime += dt;
+    var t = Math.min(1, puck.rallyTime / 20);
+    puck.minSpeed = puck.baseMinSpeed + (puck.maxMinSpeed - puck.baseMinSpeed) * t;
+    var curSpeed = Math.hypot(puck.vx, puck.vy);
+    if (curSpeed < puck.minSpeed && curSpeed > 0.001){
+      var f = puck.minSpeed / curSpeed;
+      puck.vx *= f; puck.vy *= f;
+    }
+  }
+
+  function handleGoal(scoredSide){
+    if (scoredSide === 'left') score.left++; else score.right++;
+    updateScoreDisplay();
+    sndGoal();
+    if (score.left >= settings.target || score.right >= settings.target){
+      endGame();
+    } else {
+      resetPositions(scoredSide === 'left' ? 'right' : 'left');
+    }
+  }
+
+  function endGame(){
+    state = STATE_END;
+    var winner = score.left > score.right ? 'PLAYER 1' : (settings.mode==='cpu' ? 'CPU' : 'PLAYER 2');
+    document.getElementById('endTitle').textContent = winner + ' WINS';
+    document.getElementById('endScore').textContent = score.left + ' - ' + score.right;
+    show('end');
+  }
+
+  /* ---------------------------------------------------------
+     RENDER
+  --------------------------------------------------------- */
+  function drawField(){
+    ctx.clearRect(0,0,W,H);
+
+    // outer glow border
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,246,255,0.9)';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#00f6ff';
+    ctx.shadowBlur = 18;
+    roundRectPath(field.left, field.top, field.w, field.h, 18);
+    ctx.stroke();
+    ctx.restore();
+
+    // center line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10,10]);
+    ctx.beginPath();
+    ctx.moveTo(field.midX, field.top+6);
+    ctx.lineTo(field.midX, field.bottom-6);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // center circle
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(field.midX, field.midYSafe(), Math.min(field.w,field.h)*0.14, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    // goals
+    drawGoal(field.left, 'left');
+    drawGoal(field.right, 'right');
+  }
+
+  function drawGoal(x, side){
+    var top = side==='left' ? field.goalTopLeft : field.goalTopRight;
+    var bottom = side==='left' ? field.goalBottomLeft : field.goalBottomRight;
+    ctx.save();
+    ctx.strokeStyle = side==='left' ? 'rgba(0,246,255,1)' : 'rgba(255,43,214,1)';
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 22;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function roundRectPath(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function drawMallet(m, color){
+    ctx.save();
+    ctx.fillStyle = 'rgba(6,6,24,0.9)';
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = m.active ? 26 : 14;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r*0.4, 0, Math.PI*2);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPuck(){
+    ctx.save();
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = '#ffe100';
+    ctx.shadowBlur = 24;
+    ctx.beginPath();
+    ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function render(){
+    drawField();
+    drawMallet(mallet.left, '#00f6ff');
+    drawMallet(mallet.right, '#ff2bd6');
+    drawPuck();
+  }
+
+  /* ---------------------------------------------------------
+     LOOP
+  --------------------------------------------------------- */
+  var lastT = 0;
+  function loop(now){
+    if (state !== STATE_PLAY){ return; }
+    var dt = Math.min(0.033, (now - lastT) / 1000 || 0.016);
+    lastT = now;
+
+    if (settings.mode === 'cpu'){ updateCPU(dt * 60); }
+    stepPuck(dt * 60 * 0.5); // scale to keep speeds sane relative to px
+
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------------------------------------------------------
+     MENU WIRING
+  --------------------------------------------------------- */
+  function selectGroup(selector, dataAttr, value, cb){
+    var btns = document.querySelectorAll(selector);
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        sndClick(); ensureAudio();
+        btns.forEach(function(x){ x.classList.remove('selected'); });
+        b.classList.add('selected');
+        cb(b.dataset[dataAttr]);
+      });
+    });
+  }
+
+  function resetGoalSizeUI(){
+    settings.goalSizeLeft = 'normal';
+    settings.goalSizeRight = 'normal';
+    document.querySelectorAll('.goalL-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.goal === 'normal');
+    });
+    document.querySelectorAll('.goalR-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.goal === 'normal');
+    });
+  }
+
+  selectGroup('.mode-btn', 'mode', null, function(v){
+    settings.mode = v;
+    var diffGroup = document.getElementById('diffGroup');
+    var goalGroup = document.getElementById('goalGroup');
+    diffGroup.style.opacity = v==='cpu' ? '1' : '0.3';
+    diffGroup.style.pointerEvents = v==='cpu' ? 'auto' : 'none';
+    goalGroup.style.opacity = v==='2p' ? '1' : '0.3';
+    goalGroup.style.pointerEvents = v==='2p' ? 'auto' : 'none';
+    if (v === 'cpu') resetGoalSizeUI();
+  });
+  selectGroup('.diff-btn', 'diff', null, function(v){ settings.difficulty = v; });
+  selectGroup('.goalL-btn', 'goal', null, function(v){ settings.goalSizeLeft = v; });
+  selectGroup('.goalR-btn', 'goal', null, function(v){ settings.goalSizeRight = v; });
+  selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
+  selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
+
+  document.getElementById('startBtn').addEventListener('click', function(){
+    ensureAudio(); sndClick();
+    startGame();
+  });
+
+  document.getElementById('pauseBtn').addEventListener('click', function(){
+    if (state !== STATE_PLAY) return;
+    state = STATE_PAUSE;
+    show('pause');
+  });
+  document.getElementById('resumeBtn').addEventListener('click', function(){
+    state = STATE_PLAY;
+    show('play');
+    lastT = performance.now();
+    requestAnimationFrame(loop);
+  });
+  document.getElementById('quitBtn').addEventListener('click', function(){
+    state = STATE_MENU;
+    touchMap = {};
+    show('menu');
+  });
+  document.getElementById('rematchBtn').addEventListener('click', function(){
+    startGame();
+  });
+  document.getElementById('menuBtn').addEventListener('click', function(){
+    state = STATE_MENU;
+    touchMap = {};
+    show('menu');
+  });
+
+  // prevent iOS bounce/scroll everywhere
+  document.addEventListener('touchmove', function(e){
+    if (state === STATE_PLAY) e.preventDefault();
+  }, {passive:false});
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+
+  // init
+  resize();
+  render();
+})();
+</script>
+</body>
+</html>
