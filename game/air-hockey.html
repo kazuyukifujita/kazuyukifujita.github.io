@@ -36,6 +36,8 @@
     display:flex; align-items:center; justify-content:center;
     background:rgba(2,2,16,0.86);
     z-index:10;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
   }
   #iconPickerOverlay{ z-index:20; }
   .hidden{ display:none !important; }
@@ -44,7 +46,23 @@
     display:flex; flex-direction:column; align-items:center; gap:22px;
     max-width:640px; width:90%;
     padding:28px;
+    margin:auto; /* keeps panel centered when it fits, but lets it scroll into view when it doesn't */
   }
+
+  /* Main menu has many groups — use a tighter, scrollable layout so the
+     start button is always reachable even on shorter iPad viewports. */
+  #menu{ align-items:flex-start; }
+  #menu .panel{
+    gap:12px;
+    padding:calc(14px + env(safe-area-inset-top)) 22px calc(18px + env(safe-area-inset-bottom));
+  }
+  #menu .title{ font-size:clamp(22px,5vw,34px); margin-bottom:0; }
+  #menu .subtitle{ margin-top:-4px; }
+  #menu .group{ gap:6px; }
+  #menu .row{ gap:8px; }
+  #menu button{ padding:9px 15px; font-size:13px; }
+  #menu button.primary{ padding:12px 30px; font-size:16px; margin-top:2px; }
+  #menu #fsBtn{ padding:7px 14px; font-size:11px; }
 
   .title{
     font-size:clamp(28px,6vw,48px);
