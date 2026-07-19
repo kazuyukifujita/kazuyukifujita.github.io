@@ -222,6 +222,22 @@
       </div>
 
       <div class="group">
+        <div class="group-label">マレットの大きさ</div>
+        <div class="row">
+          <span class="row-tag">P1(左)</span>
+          <button class="malletL-btn" data-mallet="small">小</button>
+          <button class="malletL-btn selected" data-mallet="normal">中</button>
+          <button class="malletL-btn" data-mallet="large">大</button>
+        </div>
+        <div class="row">
+          <span class="row-tag">P2(右)</span>
+          <button class="malletR-btn" data-mallet="small">小</button>
+          <button class="malletR-btn selected" data-mallet="normal">中</button>
+          <button class="malletR-btn" data-mallet="large">大</button>
+        </div>
+      </div>
+
+      <div class="group">
         <div class="group-label">先取点数</div>
         <div class="row">
           <button id="score5" class="target-btn" data-target="5">5点</button>
@@ -319,17 +335,21 @@
     field.goalBottomRight = midY + field.goalHeightRight/2;
 
     var scale = Math.min(field.w, field.h);
-    mallet.r = scale * 0.127;
+    var malletBaseR = scale * 0.127;
+    var mlMul = MALLET_SIZE[settings.malletSizeLeft] || 1;
+    var mrMul = MALLET_SIZE[settings.malletSizeRight] || 1;
+    mallet.left.r = malletBaseR * mlMul;
+    mallet.right.r = malletBaseR * mrMul;
     puck.r = scale * 0.03;
 
-    // clamp bounds for each player's mallet (their half, inset by radius)
+    // clamp bounds for each player's mallet (their half, inset by their own radius)
     field.leftBounds = {
-      minX: field.left + mallet.r, maxX: field.midX - mallet.r,
-      minY: field.top + mallet.r, maxY: field.bottom - mallet.r
+      minX: field.left + mallet.left.r, maxX: field.midX - mallet.left.r,
+      minY: field.top + mallet.left.r, maxY: field.bottom - mallet.left.r
     };
     field.rightBounds = {
-      minX: field.midX + mallet.r, maxX: field.right - mallet.r,
-      minY: field.top + mallet.r, maxY: field.bottom - mallet.r
+      minX: field.midX + mallet.right.r, maxX: field.right - mallet.right.r,
+      minY: field.top + mallet.right.r, maxY: field.bottom - mallet.right.r
     };
   }
 
@@ -345,7 +365,9 @@
     target: 7,
     sound: true,
     goalSizeLeft: 'normal',   // 'small' | 'normal' | 'large' (2P handicap only)
-    goalSizeRight: 'normal'
+    goalSizeRight: 'normal',
+    malletSizeLeft: 'normal', // 'small' | 'normal' | 'large' — per player, any mode
+    malletSizeRight: 'normal'
   };
 
   var DIFF = {
@@ -355,6 +377,7 @@
   };
 
   var GOAL_SIZE = { small: 0.7, normal: 1.0, large: 1.35 };
+  var MALLET_SIZE = { small: 0.75, normal: 1.0, large: 1.3 };
 
   var score = { left:0, right:0 };
 
@@ -984,6 +1007,8 @@
   selectGroup('.diff-btn', 'diff', null, function(v){ settings.difficulty = v; });
   selectGroup('.goalL-btn', 'goal', null, function(v){ settings.goalSizeLeft = v; });
   selectGroup('.goalR-btn', 'goal', null, function(v){ settings.goalSizeRight = v; });
+  selectGroup('.malletL-btn', 'mallet', null, function(v){ settings.malletSizeLeft = v; });
+  selectGroup('.malletR-btn', 'mallet', null, function(v){ settings.malletSizeRight = v; });
   selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
   selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
 
