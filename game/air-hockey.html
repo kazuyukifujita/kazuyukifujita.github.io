@@ -72,6 +72,22 @@
     font-size:12px; color:#8fe8ff; opacity:0.85; min-width:52px; text-align:right;
   }
 
+  .icon-btn{
+    width:52px; height:52px; padding:0; border-radius:50%;
+    overflow:hidden; background:#0c0c1a;
+    border:2px solid rgba(255,255,255,0.3);
+    box-shadow:none;
+  }
+  .icon-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .icon-btn.selected{
+    border-color:#fff;
+    box-shadow:0 0 10px rgba(255,255,255,0.7), 0 0 18px rgba(255,255,255,0.4);
+  }
+  .icon-btn.none-btn{
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px; color:#889;
+  }
+
   button{
     font-family:inherit; cursor:pointer;
     border-radius:14px;
@@ -222,6 +238,26 @@
       </div>
 
       <div class="group">
+        <div class="group-label">アイコン</div>
+        <div class="row">
+          <span class="row-tag">P1(左)</span>
+          <button class="iconL-btn none-btn selected" data-icon="none">✕</button>
+          <button class="iconL-btn" data-icon="dad"><img src="icons/dad.png" alt=""></button>
+          <button class="iconL-btn" data-icon="girl"><img src="icons/girl.png" alt=""></button>
+          <button class="iconL-btn" data-icon="baby"><img src="icons/baby.png" alt=""></button>
+          <button class="iconL-btn" data-icon="mom"><img src="icons/mom.png" alt=""></button>
+        </div>
+        <div class="row">
+          <span class="row-tag">P2(右)</span>
+          <button class="iconR-btn none-btn selected" data-icon="none">✕</button>
+          <button class="iconR-btn" data-icon="dad"><img src="icons/dad.png" alt=""></button>
+          <button class="iconR-btn" data-icon="girl"><img src="icons/girl.png" alt=""></button>
+          <button class="iconR-btn" data-icon="baby"><img src="icons/baby.png" alt=""></button>
+          <button class="iconR-btn" data-icon="mom"><img src="icons/mom.png" alt=""></button>
+        </div>
+      </div>
+
+      <div class="group">
         <div class="group-label">マレットの大きさ</div>
         <div class="row">
           <span class="row-tag">P1(左)</span>
@@ -335,7 +371,7 @@
     field.goalBottomRight = midY + field.goalHeightRight/2;
 
     var scale = Math.min(field.w, field.h);
-    var malletBaseR = scale * 0.127;
+    var malletBaseR = scale * 0.073;
     var mlMul = MALLET_SIZE[settings.malletSizeLeft] || 1;
     var mrMul = MALLET_SIZE[settings.malletSizeRight] || 1;
     mallet.left.r = malletBaseR * mlMul;
@@ -367,8 +403,21 @@
     goalSizeLeft: 'normal',   // 'small' | 'normal' | 'large' (2P handicap only)
     goalSizeRight: 'normal',
     malletSizeLeft: 'normal', // 'small' | 'normal' | 'large' — per player, any mode
-    malletSizeRight: 'normal'
+    malletSizeRight: 'normal',
+    iconLeft: 'none',   // 'none' | 'dad' | 'girl' | 'baby' | 'mom'
+    iconRight: 'none'
   };
+
+  var ICON_SRC = { dad:'icons/dad.png', girl:'icons/girl.png', baby:'icons/baby.png', mom:'icons/mom.png' };
+  var ICON_IMAGES = {};
+  Object.keys(ICON_SRC).forEach(function(k){
+    var im = new Image();
+    im.src = ICON_SRC[k];
+    ICON_IMAGES[k] = im;
+  });
+  function getIconImg(key){
+    return (key && key !== 'none' && ICON_IMAGES[key]) ? ICON_IMAGES[key] : null;
+  }
 
   var DIFF = {
     easy:   { maxSpeed: 4.2, reaction: 0.30, error: 46, aggressiveness: 0.45 },
@@ -914,23 +963,36 @@
     ctx.closePath();
   }
 
-  function drawMallet(m, color){
+  function drawMallet(m, color, iconImg){
+    var hasIcon = iconImg && iconImg.complete && iconImg.naturalWidth > 0;
+
     ctx.save();
-    ctx.fillStyle = 'rgba(6,6,24,0.9)';
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+
+    if (hasIcon){
+      ctx.save();
+      ctx.clip();
+      ctx.drawImage(iconImg, m.x-m.r, m.y-m.r, m.r*2, m.r*2);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = 'rgba(6,6,24,0.9)';
+      ctx.fill();
+    }
+
     ctx.strokeStyle = color;
     ctx.shadowColor = color;
     ctx.shadowBlur = m.active ? 26 : 14;
     ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
-    ctx.fill();
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(m.x, m.y, m.r*0.4, 0, Math.PI*2);
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2;
-    ctx.stroke();
+    if (!hasIcon){
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r*0.4, 0, Math.PI*2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
     ctx.restore();
   }
 
@@ -947,8 +1009,8 @@
 
   function render(){
     drawField();
-    drawMallet(mallet.left, '#00f6ff');
-    drawMallet(mallet.right, '#ff2bd6');
+    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft));
+    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight));
     drawPuck();
   }
 
@@ -1009,6 +1071,8 @@
   selectGroup('.goalR-btn', 'goal', null, function(v){ settings.goalSizeRight = v; });
   selectGroup('.malletL-btn', 'mallet', null, function(v){ settings.malletSizeLeft = v; });
   selectGroup('.malletR-btn', 'mallet', null, function(v){ settings.malletSizeRight = v; });
+  selectGroup('.iconL-btn', 'icon', null, function(v){ settings.iconLeft = v; });
+  selectGroup('.iconR-btn', 'icon', null, function(v){ settings.iconRight = v; });
   selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
   selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
 
