@@ -277,7 +277,7 @@ font-weight: 700;
 	color: #9C9C9C;
 }
 
-figure.portofolio {
+figure.portfolio {
     float:left;
 		width: 25%;
     margin: 0 15px 15px 0;
@@ -285,7 +285,7 @@ figure.portofolio {
     background: #FFFFFF;
 }
 
-.portofolio img{
+.portfolio img{
 		max-width: 100%;
 		height: auto;
 }

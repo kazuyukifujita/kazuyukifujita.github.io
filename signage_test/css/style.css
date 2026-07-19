@@ -1,0 +1,691 @@
+:root {
+  --sky-top: #0d1b3d;
+  --sky-mid: #2a2f6b;
+  --sky-horizon: #a15a8a;
+  --sky-glow: #ffb28a;
+  --ink: #1f2436;
+  --cloud-text: #2c2f45;
+  --accent: #ffd39a;
+  --accent-strong: #ff9f6b;
+  --danger: #ff5f6d;
+  --panel-bg: rgba(18, 22, 46, 0.72);
+  --panel-border: rgba(255, 255, 255, 0.14);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--sky-top);
+  font-family: "Hiragino Sans", "Yu Gothic", "Segoe UI", system-ui, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input {
+  font-family: inherit;
+}
+
+/* ---------- Sky background ---------- */
+
+#sky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(120% 70% at 50% 115%, rgba(255, 178, 138, 0.35), transparent 60%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-horizon) 100%);
+  overflow: hidden;
+}
+
+#horizon-glow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10%;
+  height: 45%;
+  background: radial-gradient(60% 100% at 50% 100%, rgba(255, 179, 120, 0.4), transparent 70%);
+  pointer-events: none;
+}
+
+#stars {
+  position: absolute;
+  inset: 0;
+}
+
+.star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.6;
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.85; }
+}
+
+.bg-cloud {
+  position: absolute;
+  top: var(--top);
+  left: -30%;
+  width: var(--w);
+  height: var(--h);
+  background: radial-gradient(ellipse at center, rgba(255,255,255,0.5), rgba(255,255,255,0) 70%);
+  filter: blur(6px);
+  opacity: var(--o);
+  border-radius: 50%;
+  animation: drift var(--dur) linear infinite;
+  animation-delay: var(--delay);
+}
+
+@keyframes drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(160vw); }
+}
+
+/* ---------- Header hint ---------- */
+
+#hint {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  margin: 0;
+  padding: 6px 18px;
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+  font-weight: 500;
+  pointer-events: none;
+  transition: opacity 1.2s ease;
+}
+
+#hint.faded { opacity: 0; }
+
+/* ---------- Empty state ---------- */
+
+#empty-state {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 1.05rem;
+  line-height: 1.8;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+#empty-state.hidden { opacity: 0; }
+
+/* ---------- Cloud layer ---------- */
+
+#cloud-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+}
+
+.cloud-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.cloud-bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin-left: calc(var(--d) / -2);
+  margin-top: calc(var(--d) / -2);
+  width: var(--d);
+  height: var(--d);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 14px 18px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.96), var(--cloud-tint, #eef1ff) 75%);
+  border-radius: 58% 42% 55% 45% / 48% 55% 45% 52%;
+  box-shadow:
+    0 8px 30px rgba(10, 12, 30, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+    0 0 26px var(--cloud-glow, rgba(255,255,255,0.25));
+  backdrop-filter: blur(1px);
+  cursor: grab;
+  touch-action: none;
+  will-change: transform;
+  animation: blobmorph 14s ease-in-out infinite;
+  animation-delay: var(--phase-delay, 0s);
+  transition: box-shadow 0.25s ease;
+}
+
+.cloud-bubble.dragging {
+  cursor: grabbing;
+  z-index: 30;
+  animation-play-state: paused;
+  box-shadow:
+    0 16px 44px rgba(10, 12, 30, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.7) inset,
+    0 0 40px var(--cloud-glow, rgba(255,255,255,0.5));
+  transition: none;
+}
+
+.cloud-bubble:hover {
+  box-shadow:
+    0 10px 34px rgba(10, 12, 30, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+    0 0 34px var(--cloud-glow, rgba(255,255,255,0.4));
+}
+
+.cloud-bubble.spawning {
+  animation: spawn-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both, blobmorph 14s ease-in-out infinite;
+}
+
+.cloud-bubble.removing {
+  animation: dissolve 0.45s ease forwards !important;
+  pointer-events: none;
+}
+
+@keyframes spawn-pop {
+  0% { opacity: 0; transform: scale(0.3); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dissolve {
+  to { opacity: 0; filter: blur(6px); }
+}
+
+@keyframes blobmorph {
+  0%, 100% { border-radius: 58% 42% 55% 45% / 48% 55% 45% 52%; }
+  33% { border-radius: 45% 55% 48% 52% / 55% 45% 58% 42%; }
+  66% { border-radius: 52% 48% 60% 40% / 42% 58% 44% 56%; }
+}
+
+.cloud-text {
+  color: var(--cloud-text);
+  text-align: center;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  /* JS側の幾何計算で140文字でも収まるようフォント/直径を決めているため、
+     ここは万一のズレに備えた安全策として余裕を持たせておく。 */
+  -webkit-line-clamp: 14;
+  -webkit-box-orient: vertical;
+}
+
+/* コメント数・いいね数はバブル内に収まる形で下部にまとめて表示する */
+.cloud-stats {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.cloud-stats.visible { display: flex; }
+
+.cloud-badge {
+  background: var(--accent-strong);
+  color: #2a1200;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  display: none;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.cloud-badge.visible { display: inline-flex; }
+
+.cloud-delete {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(30, 20, 30, 0.75);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cloud-bubble:hover .cloud-delete,
+.cloud-bubble:focus-within .cloud-delete {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.cloud-delete:hover {
+  background: var(--danger);
+}
+
+/* 一覧(雲)ではいいねは押せない表示専用バッジ。0件のときはバッジごと非表示。 */
+.cloud-like-badge {
+  background: rgba(255, 255, 255, 0.85);
+  color: #b34760;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  display: none;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.cloud-like-badge.visible { display: inline-flex; }
+
+/* スレッド画面のいいねボタンは0件でもアイコンは表示し、数字だけ0件時に隠す */
+.like-count {
+  display: none;
+}
+
+.like-count.visible {
+  display: inline;
+}
+
+/* ---------- Input bar ---------- */
+
+#input-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: min(640px, 88vw);
+  padding: 8px 10px 8px 14px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+  backdrop-filter: blur(14px);
+}
+
+#comment-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  font-size: 1rem;
+  padding: 10px 6px;
+}
+
+#comment-input::placeholder {
+  color: rgba(255,255,255,0.4);
+}
+
+#mic-btn, #send-btn, #thread-mic-btn, #thread-reply-send {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.2s ease;
+}
+
+#mic-btn, #thread-mic-btn {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.85);
+}
+
+#mic-btn:hover, #thread-mic-btn:hover { background: rgba(255,255,255,0.18); }
+
+#mic-btn.listening, #thread-mic-btn.listening {
+  background: var(--danger);
+  color: #fff;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 95, 109, 0.55); }
+  50% { box-shadow: 0 0 0 10px rgba(255, 95, 109, 0); }
+}
+
+#send-btn, #thread-reply-send {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #2a1200;
+}
+
+#send-btn:hover, #thread-reply-send:hover { transform: scale(1.06); }
+#send-btn:active, #thread-reply-send:active { transform: scale(0.94); }
+
+/* ---------- Toast ---------- */
+
+#toast {
+  position: fixed;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 10px 20px;
+  background: rgba(20, 16, 30, 0.9);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#toast.hidden {
+  opacity: 0;
+  transform: translate(-50%, 10px);
+  pointer-events: none;
+}
+
+/* ---------- Modals ---------- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 8, 20, 0.6);
+  backdrop-filter: blur(6px);
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-card {
+  background: #14172c;
+  color: #f2f2f7;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 22px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  padding: 26px;
+  position: relative;
+}
+
+.thread-card {
+  width: min(560px, 90vw);
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.6);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.modal-close:hover { color: #fff; }
+
+.thread-root {
+  padding-bottom: 16px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+
+#thread-root-text {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.6;
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.thread-root-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.thread-time {
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.4);
+}
+
+.thread-root-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thread-root-like-btn {
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #ffb7c8;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.thread-root-like-btn:hover {
+  background: rgba(255,255,255,0.16);
+  transform: scale(1.05);
+}
+
+.thread-root-delete-btn {
+  border: none;
+  background: none;
+  color: rgba(255, 95, 109, 0.85);
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+.thread-root-delete-btn:hover {
+  background: rgba(255, 95, 109, 0.15);
+  color: #ff5f6d;
+}
+
+.thread-replies {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 4px;
+  min-height: 40px;
+}
+
+.thread-reply-empty {
+  color: rgba(255,255,255,0.35);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 18px 0;
+}
+
+.reply-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.reply-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.reply-text {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.reply-time {
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.35);
+  margin-top: 2px;
+  display: block;
+}
+
+.reply-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.reply-like {
+  flex-shrink: 0;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: #ffb7c8;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.reply-like:hover {
+  background: rgba(255,255,255,0.16);
+  transform: scale(1.06);
+}
+
+.reply-delete {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.6);
+  font-size: 14px;
+}
+
+.reply-delete:hover {
+  background: var(--danger);
+  color: #fff;
+}
+
+.thread-reply-bar {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 999px;
+  padding: 6px 6px 6px 14px;
+}
+
+#thread-reply-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #fff;
+  font-size: 0.94rem;
+  padding: 8px 4px;
+}
+
+#thread-reply-input::placeholder {
+  color: rgba(255,255,255,0.35);
+}
+
+.confirm-card {
+  width: min(360px, 86vw);
+  text-align: center;
+}
+
+#confirm-message {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 4px 0 22px;
+  white-space: pre-line;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.btn-ghost, .btn-danger {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  background: rgba(255,255,255,0.1);
+  color: #f2f2f7;
+}
+
+.btn-ghost:hover { background: rgba(255,255,255,0.18); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+
+.btn-danger:hover { filter: brightness(1.08); }
+
+.hidden { display: none !important; }
