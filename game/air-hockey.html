@@ -1039,9 +1039,8 @@
     if (hasIcon){
       ctx.save();
       ctx.clip();
-      // players sit facing each other across the table (left side / right
-      // side), so the far side's icon is rotated 180° here — that makes it
-      // appear upright to the player actually standing on that side.
+      // rotated per-side so the photo faces whoever is standing at that
+      // edge of the flat-lying iPad (see rotation values passed by render()).
       ctx.translate(m.x, m.y);
       ctx.rotate(rotation);
       ctx.drawImage(iconImg, -m.r, -m.r, m.r*2, m.r*2);
@@ -1080,8 +1079,12 @@
 
   function render(){
     drawField();
-    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), 0);
-    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), Math.PI);
+    // iPad lies flat on the table: the left-side player views the screen
+    // from the left edge, the right-side player from the right edge. Rotate
+    // each player's icon to face them — left rotates 90° clockwise, right
+    // rotates 90° counter-clockwise.
+    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), Math.PI/2);
+    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), -Math.PI/2);
     drawPuck();
   }
 
