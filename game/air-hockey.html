@@ -125,6 +125,35 @@
   }
 
   .end-title{ font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center; }
+
+  #goalFlash{
+    position:absolute; inset:0; z-index:8; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .12s ease;
+    overflow:hidden;
+  }
+  #goalFlash.show{ opacity:1; }
+  #goalFlash .bgFlash{
+    position:absolute; inset:0;
+    animation: bgFlashAnim 0.7s ease-out forwards;
+  }
+  #goalFlash .flashText{
+    position:relative;
+    font-size:clamp(48px,13vw,130px); font-weight:900; letter-spacing:6px;
+    color:#fff;
+    animation: goalPop 1.2s ease forwards;
+  }
+  @keyframes bgFlashAnim{
+    0%{ opacity:0.5; }
+    100%{ opacity:0; }
+  }
+  @keyframes goalPop{
+    0%{ transform:scale(0.35); opacity:0; }
+    14%{ transform:scale(1.18); opacity:1; }
+    28%{ transform:scale(1); opacity:1; }
+    82%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(1.06); opacity:0; }
+  }
 </style>
 </head>
 <body>
@@ -209,6 +238,8 @@
     </div>
   </div>
 
+  <div id="goalFlash" class="hidden"></div>
+
   <!-- PAUSE -->
   <div id="pauseOverlay" class="overlay hidden">
     <div class="panel">
@@ -281,8 +312,8 @@
     field.goalBottomRight = midY + field.goalHeightRight/2;
 
     var scale = Math.min(field.w, field.h);
-    mallet.r = scale * 0.052;
-    puck.r = mallet.r * 0.55;
+    mallet.r = scale * 0.075;
+    puck.r = scale * 0.03;
 
     // clamp bounds for each player's mallet (their half, inset by radius)
     field.leftBounds = {
@@ -298,7 +329,7 @@
   /* ---------------------------------------------------------
      STATE
   --------------------------------------------------------- */
-  var STATE_MENU='menu', STATE_PLAY='play', STATE_PAUSE='pause', STATE_END='end';
+  var STATE_MENU='menu', STATE_PLAY='play', STATE_PAUSE='pause', STATE_GOAL='goal', STATE_END='end';
   var state = STATE_MENU;
 
   var settings = {
@@ -343,16 +374,39 @@
      AUDIO
   --------------------------------------------------------- */
   var actx = null;
+  var audioUnlocked = false;
+
+  function unlockAudio(){
+    // iOS Safari keeps a freshly-created AudioContext (and any context that has
+    // been backgrounded) suspended until a real user gesture explicitly plays
+    // something through it. A 1-sample silent buffer is the standard trick.
+    if (!actx) return;
+    try{
+      var buffer = actx.createBuffer(1, 1, 22050);
+      var src = actx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(actx.destination);
+      if (src.start) src.start(0); else src.noteOn(0);
+    }catch(e){ /* ignore */ }
+    audioUnlocked = true;
+  }
+
   function ensureAudio(){
     if (!settings.sound) return;
     if (!actx){
       try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx=null; }
-    } else if (actx.state === 'suspended'){
+    }
+    if (!actx) return;
+    if (actx.state === 'suspended'){
       actx.resume();
+    }
+    if (!audioUnlocked){
+      unlockAudio();
     }
   }
   function blip(freq, dur, type, vol){
     if (!settings.sound || !actx) return;
+    if (actx.state === 'suspended'){ actx.resume(); }
     var t0 = actx.currentTime;
     var osc = actx.createOscillator();
     var gain = actx.createGain();
@@ -436,6 +490,7 @@
   canvas.addEventListener('touchstart', function(e){
     if (state !== STATE_PLAY) return;
     e.preventDefault();
+    ensureAudio(); // real touch gesture — good moment to (re)unlock iOS audio
     var rect = canvas.getBoundingClientRect();
     for (var i=0;i<e.changedTouches.length;i++){
       var t = e.changedTouches[i];
@@ -663,15 +718,47 @@
     }
   }
 
+  var GOAL_CELEBRATION_MS = 1300;
+
   function handleGoal(scoredSide){
     if (scoredSide === 'left') score.left++; else score.right++;
     updateScoreDisplay();
     sndGoal();
-    if (score.left >= settings.target || score.right >= settings.target){
-      endGame();
-    } else {
-      resetPositions(scoredSide === 'left' ? 'right' : 'left');
-    }
+    puck.vx = 0; puck.vy = 0;
+
+    var isGameOver = (score.left >= settings.target || score.right >= settings.target);
+    state = STATE_GOAL; // freezes input + game loop until celebration ends
+    showGoalFlash(scoredSide);
+
+    setTimeout(function(){
+      hideGoalFlash();
+      if (isGameOver){
+        endGame();
+      } else {
+        resetPositions(scoredSide === 'left' ? 'right' : 'left');
+        state = STATE_PLAY;
+        lastT = performance.now();
+        requestAnimationFrame(loop);
+      }
+    }, GOAL_CELEBRATION_MS);
+  }
+
+  function showGoalFlash(scoredSide){
+    var el = document.getElementById('goalFlash');
+    var color = scoredSide === 'left' ? '#00f6ff' : '#ff2bd6';
+    var label = scoredSide === 'left' ? 'PLAYER 1 GOAL!' : (settings.mode==='cpu' ? 'CPU GOAL!' : 'PLAYER 2 GOAL!');
+    el.innerHTML =
+      '<div class="bgFlash" style="background:'+color+';"></div>' +
+      '<div class="flashText" style="text-shadow:0 0 20px '+color+', 0 0 60px '+color+';">'+label+'</div>';
+    el.classList.remove('hidden');
+    requestAnimationFrame(function(){ el.classList.add('show'); });
+  }
+
+  function hideGoalFlash(){
+    var el = document.getElementById('goalFlash');
+    el.classList.remove('show');
+    el.classList.add('hidden');
+    el.innerHTML = '';
   }
 
   function endGame(){
@@ -724,18 +811,58 @@
     drawGoal(field.right, 'right');
   }
 
+  var GOAL_COLORS = {
+    left:  { solid:'rgba(0,246,255,1)',   mid:'rgba(0,246,255,0.4)',   clear:'rgba(0,246,255,0)' },
+    right: { solid:'rgba(255,43,214,1)',  mid:'rgba(255,43,214,0.4)',  clear:'rgba(255,43,214,0)' }
+  };
+
   function drawGoal(x, side){
     var top = side==='left' ? field.goalTopLeft : field.goalTopRight;
     var bottom = side==='left' ? field.goalBottomLeft : field.goalBottomRight;
+    var c = GOAL_COLORS[side];
+    var dirIn = side==='left' ? 1 : -1;
+    var depth = field.w * 0.09;
+    var pulse = 0.75 + 0.25 * Math.sin(performance.now() / 380);
+
     ctx.save();
-    ctx.strokeStyle = side==='left' ? 'rgba(0,246,255,1)' : 'rgba(255,43,214,1)';
-    ctx.shadowColor = ctx.strokeStyle;
-    ctx.shadowBlur = 22;
-    ctx.lineWidth = 5;
+
+    // glowing goal-mouth zone fading into the field
+    var grad = ctx.createLinearGradient(x, 0, x + dirIn*depth, 0);
+    grad.addColorStop(0, c.mid);
+    grad.addColorStop(1, c.clear);
+    ctx.fillStyle = grad;
+    ctx.fillRect(Math.min(x, x + dirIn*depth), top, depth, bottom - top);
+
+    // net hatch pattern
+    ctx.strokeStyle = c.mid;
+    ctx.lineWidth = 1.5;
+    for (var yy = top; yy < bottom; yy += 14){
+      ctx.beginPath();
+      ctx.moveTo(x, yy);
+      ctx.lineTo(x + dirIn*depth*0.65, yy + 10);
+      ctx.stroke();
+    }
+
+    // goal line itself — thick, glowing, gently pulsing
+    ctx.strokeStyle = c.solid;
+    ctx.shadowColor = c.solid;
+    ctx.shadowBlur = 18 + 14*pulse;
+    ctx.lineWidth = 8;
     ctx.beginPath();
     ctx.moveTo(x, top);
     ctx.lineTo(x, bottom);
     ctx.stroke();
+
+    // goal posts (bright caps top & bottom)
+    [top, bottom].forEach(function(yy){
+      ctx.beginPath();
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = c.solid;
+      ctx.shadowBlur = 24;
+      ctx.arc(x, yy, 8, 0, Math.PI*2);
+      ctx.fill();
+    });
+
     ctx.restore();
   }
 
@@ -880,6 +1007,14 @@
     if (state === STATE_PLAY) e.preventDefault();
   }, {passive:false});
   document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+
+  // iOS can suspend the AudioContext whenever the tab is backgrounded
+  // (app switch, screen lock, Safari tab switch) — resume it on return.
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden && actx && actx.state === 'suspended'){
+      actx.resume();
+    }
+  });
 
   // init
   resize();
