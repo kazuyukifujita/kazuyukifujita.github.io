@@ -91,6 +91,32 @@
     font-size:12px; color:#8fe8ff; opacity:0.85; min-width:52px; text-align:right;
   }
 
+  /* Two-column per-player settings: P1(left) settings sit on the left half
+     of the menu, P2(right) settings on the right half — mirroring their
+     actual sides of the table. */
+  .player-cols{
+    display:flex; width:100%; gap:18px; justify-content:center;
+  }
+  .player-col{
+    flex:1 1 0; min-width:0;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:10px 8px; border-radius:12px;
+    background:rgba(255,255,255,0.03);
+  }
+  .player-col[data-side="left"]{ border:1px solid rgba(0,246,255,0.35); }
+  .player-col[data-side="right"]{ border:1px solid rgba(255,43,214,0.35); }
+  .player-col-title{
+    font-size:12px; letter-spacing:2px; opacity:0.85; margin-bottom:2px;
+  }
+  .player-col[data-side="left"] .player-col-title{ color:var(--neon-cyan); }
+  .player-col[data-side="right"] .player-col-title{ color:var(--neon-magenta); }
+  .mini-label{
+    font-size:10px; color:#9fe8ff; opacity:0.7; letter-spacing:1px; margin-top:2px;
+  }
+  .mini-row{ gap:6px; }
+  .mini-row button{ padding:7px 11px; font-size:12px; }
+  .goal-block{ opacity:0.3; pointer-events:none; } /* dimmed by default (CPU mode); enabled in 2P mode */
+
   .icon-pick-btn{
     display:flex; flex-direction:column; align-items:center; gap:6px;
     background:transparent; border:none; box-shadow:none; padding:6px;
@@ -252,51 +278,48 @@
         </div>
       </div>
 
-      <div class="group" id="goalGroup" style="opacity:0.3;pointer-events:none;">
-        <div class="group-label">ゴールの大きさ(ハンディキャップ)</div>
-        <div class="group-note">小=守りやすい(有利)　大=守りにくい(不利)</div>
-        <div class="row">
-          <span class="row-tag">P1(左)</span>
-          <button class="goalL-btn" data-goal="small">小</button>
-          <button class="goalL-btn selected" data-goal="normal">中</button>
-          <button class="goalL-btn" data-goal="large">大</button>
-        </div>
-        <div class="row">
-          <span class="row-tag">P2(右)</span>
-          <button class="goalR-btn" data-goal="small">小</button>
-          <button class="goalR-btn selected" data-goal="normal">中</button>
-          <button class="goalR-btn" data-goal="large">大</button>
-        </div>
-      </div>
-
       <div class="group">
-        <div class="group-label">アイコン</div>
-        <div class="row">
-          <button class="icon-pick-btn" id="iconPickL" type="button">
-            <span class="icon-pick-thumb" id="iconPickThumbL">✕</span>
-            <span class="icon-pick-label">P1(左)</span>
-          </button>
-          <button class="icon-pick-btn" id="iconPickR" type="button">
-            <span class="icon-pick-thumb" id="iconPickThumbR">✕</span>
-            <span class="icon-pick-label">P2(右)</span>
-          </button>
+        <div class="player-cols">
+          <div class="player-col" data-side="left">
+            <div class="player-col-title">P1（左）</div>
+            <button class="icon-pick-btn" id="iconPickL" type="button">
+              <span class="icon-pick-thumb" id="iconPickThumbL">✕</span>
+              <span class="icon-pick-label">アイコン</span>
+            </button>
+            <div class="mini-label">マレットの大きさ</div>
+            <div class="row mini-row">
+              <button class="malletL-btn" data-mallet="small">小</button>
+              <button class="malletL-btn selected" data-mallet="normal">中</button>
+              <button class="malletL-btn" data-mallet="large">大</button>
+            </div>
+            <div class="mini-label goal-block" id="goalLabelL">ゴールの大きさ</div>
+            <div class="row mini-row goal-block" id="goalRowL">
+              <button class="goalL-btn" data-goal="small">小</button>
+              <button class="goalL-btn selected" data-goal="normal">中</button>
+              <button class="goalL-btn" data-goal="large">大</button>
+            </div>
+          </div>
+          <div class="player-col" data-side="right">
+            <div class="player-col-title">P2（右）</div>
+            <button class="icon-pick-btn" id="iconPickR" type="button">
+              <span class="icon-pick-thumb" id="iconPickThumbR">✕</span>
+              <span class="icon-pick-label">アイコン</span>
+            </button>
+            <div class="mini-label">マレットの大きさ</div>
+            <div class="row mini-row">
+              <button class="malletR-btn" data-mallet="small">小</button>
+              <button class="malletR-btn selected" data-mallet="normal">中</button>
+              <button class="malletR-btn" data-mallet="large">大</button>
+            </div>
+            <div class="mini-label goal-block" id="goalLabelR">ゴールの大きさ</div>
+            <div class="row mini-row goal-block" id="goalRowR">
+              <button class="goalR-btn" data-goal="small">小</button>
+              <button class="goalR-btn selected" data-goal="normal">中</button>
+              <button class="goalR-btn" data-goal="large">大</button>
+            </div>
+          </div>
         </div>
-      </div>
-
-      <div class="group">
-        <div class="group-label">マレットの大きさ</div>
-        <div class="row">
-          <span class="row-tag">P1(左)</span>
-          <button class="malletL-btn" data-mallet="small">小</button>
-          <button class="malletL-btn selected" data-mallet="normal">中</button>
-          <button class="malletL-btn" data-mallet="large">大</button>
-        </div>
-        <div class="row">
-          <span class="row-tag">P2(右)</span>
-          <button class="malletR-btn" data-mallet="small">小</button>
-          <button class="malletR-btn selected" data-mallet="normal">中</button>
-          <button class="malletR-btn" data-mallet="large">大</button>
-        </div>
+        <div class="group-note goal-block" id="goalNote">ゴール：小=守りやすい(有利)　大=守りにくい(不利)　※2人対戦のみ</div>
       </div>
 
       <div class="group">
@@ -479,8 +502,8 @@
 
   var puck = {
     x:0, y:0, vx:0, vy:0, r:20,
-    minSpeed: 3.4, baseMinSpeed: 3.4, maxMinSpeed: 9.5,
-    maxSpeed: 22,
+    minSpeed: 3.4, baseMinSpeed: 3.4, maxMinSpeed: 13,
+    maxSpeed: 27,
     rallyTime: 0,
     rallyHits: 0
   };
@@ -766,13 +789,14 @@
       var rvx = puck.vx - m.vx, rvy = puck.vy - m.vy;
       var relSpeed = rvx*nx + rvy*ny;
       if (relSpeed < 0){
-        var restitution = 1.05;
+        var restitution = 1.22; // exaggerate the bounce a bit for more punchy hits
         puck.vx -= (1+restitution) * relSpeed * nx;
         puck.vy -= (1+restitution) * relSpeed * ny;
       }
-      // add a bit of mallet's own motion as extra kick
-      puck.vx += m.vx * 0.35;
-      puck.vy += m.vy * 0.35;
+      // add a bit of mallet's own motion as extra kick — boosted so a fast
+      // swing visibly sends the puck flying faster than a slow tap
+      puck.vx += m.vx * 0.55;
+      puck.vy += m.vy * 0.55;
 
       var spd = Math.hypot(puck.vx, puck.vy);
       if (spd > puck.maxSpeed){
@@ -1004,8 +1028,9 @@
     ctx.closePath();
   }
 
-  function drawMallet(m, color, iconImg){
+  function drawMallet(m, color, iconImg, rotation){
     var hasIcon = iconImg && iconImg.complete && iconImg.naturalWidth > 0;
+    rotation = rotation || 0;
 
     ctx.save();
     ctx.beginPath();
@@ -1014,7 +1039,12 @@
     if (hasIcon){
       ctx.save();
       ctx.clip();
-      ctx.drawImage(iconImg, m.x-m.r, m.y-m.r, m.r*2, m.r*2);
+      // players sit facing each other across the table (left side / right
+      // side), so the far side's icon is rotated 180° here — that makes it
+      // appear upright to the player actually standing on that side.
+      ctx.translate(m.x, m.y);
+      ctx.rotate(rotation);
+      ctx.drawImage(iconImg, -m.r, -m.r, m.r*2, m.r*2);
       ctx.restore();
     } else {
       ctx.fillStyle = 'rgba(6,6,24,0.9)';
@@ -1050,8 +1080,8 @@
 
   function render(){
     drawField();
-    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft));
-    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight));
+    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), 0);
+    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), Math.PI);
     drawPuck();
   }
 
@@ -1100,11 +1130,12 @@
   selectGroup('.mode-btn', 'mode', null, function(v){
     settings.mode = v;
     var diffGroup = document.getElementById('diffGroup');
-    var goalGroup = document.getElementById('goalGroup');
     diffGroup.style.opacity = v==='cpu' ? '1' : '0.3';
     diffGroup.style.pointerEvents = v==='cpu' ? 'auto' : 'none';
-    goalGroup.style.opacity = v==='2p' ? '1' : '0.3';
-    goalGroup.style.pointerEvents = v==='2p' ? 'auto' : 'none';
+    document.querySelectorAll('.goal-block').forEach(function(el){
+      el.style.opacity = v==='2p' ? '1' : '0.3';
+      el.style.pointerEvents = v==='2p' ? 'auto' : 'none';
+    });
     if (v === 'cpu') resetGoalSizeUI();
   });
   selectGroup('.diff-btn', 'diff', null, function(v){ settings.difficulty = v; });
