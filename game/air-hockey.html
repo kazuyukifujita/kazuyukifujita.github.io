@@ -499,9 +499,9 @@
   }
 
   var DIFF = {
-    easy:   { maxSpeed: 4.2, reaction: 0.30, error: 46, aggressiveness: 0.45 },
-    normal: { maxSpeed: 7.2, reaction: 0.14, error: 20, aggressiveness: 0.65 },
-    hard:   { maxSpeed: 11.5, reaction: 0.05, error: 7,  aggressiveness: 0.85 }
+    easy:   { maxSpeed: 4.2,  reaction: 0.30, error: 46, aggressiveness: 0.45 },
+    normal: { maxSpeed: 7.2,  reaction: 0.14, error: 20, aggressiveness: 0.65 },
+    hard:   { maxSpeed: 16.5, reaction: 0.02, error: 3,  aggressiveness: 0.95 }
   };
 
   var GOAL_SIZE = { small: 0.7, normal: 1.0, large: 1.35 };
@@ -559,6 +559,13 @@
     curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, // 'curve' item state
     ghostUntil: 0, ghostFlashUntil: 0 // 'ghost' item state
   };
+
+  // Watches for the puck getting wedged in a corner/against a mallet and
+  // barely moving for too long (can happen especially against the CPU in a
+  // corner) — if so, it gets a firm shove back toward the center.
+  var stuckWatch = { x:0, y:0, timer:0 };
+  var STUCK_TIMEOUT_S = 1.4;      // how long with near-zero movement before we intervene
+  var STUCK_MOVE_THRESHOLD = 26;  // px — movement below this over the timeout counts as "stuck"
 
   var cpu = {
     targetY: 0,
@@ -649,6 +656,8 @@
     // and any item a player is holding both carry over across a goal, so a
     // player who grabbed an item but hadn't used it yet can still use it on
     // the very next point.
+
+    stuckWatch.x = puck.x; stuckWatch.y = puck.y; stuckWatch.timer = 0;
   }
   field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
 
@@ -1133,6 +1142,30 @@
     }
   }
 
+  // Runs once per real second-tracked frame (dtReal = real elapsed seconds).
+  // If the puck hasn't traveled more than STUCK_MOVE_THRESHOLD px in
+  // STUCK_TIMEOUT_S seconds, it's considered wedged (e.g. pinned in a
+  // corner against a mallet) and gets pushed firmly back toward center.
+  function updateStuckWatchdog(dtReal){
+    var moved = Math.hypot(puck.x - stuckWatch.x, puck.y - stuckWatch.y);
+    if (moved > STUCK_MOVE_THRESHOLD){
+      stuckWatch.x = puck.x; stuckWatch.y = puck.y; stuckWatch.timer = 0;
+      return;
+    }
+    stuckWatch.timer += dtReal;
+    if (stuckWatch.timer > STUCK_TIMEOUT_S){
+      var cx = field.midX, cy = field.midYSafe();
+      var dx = cx - puck.x, dy = cy - puck.y;
+      var d = Math.hypot(dx, dy) || 1;
+      var speed = Math.max(puck.minSpeed * 2.2, 7);
+      puck.vx = dx / d * speed;
+      puck.vy = dy / d * speed;
+      puck.x += (dx / d) * puck.r; // nudge clear of the wall/mallet so it isn't re-trapped instantly
+      puck.y += (dy / d) * puck.r;
+      stuckWatch.x = puck.x; stuckWatch.y = puck.y; stuckWatch.timer = 0;
+    }
+  }
+
   var GOAL_CELEBRATION_MS = 1300;
 
   function handleGoal(scoredSide){
@@ -1436,6 +1469,7 @@
 
     if (settings.mode === 'cpu'){ updateCPU(dt * 60); }
     updateItems(dt); // dt here is real seconds, used for the item's drift movement
+    updateStuckWatchdog(dt);
     stepPuck(dt * 60 * 0.5); // scale to keep speeds sane relative to px
 
     render();
