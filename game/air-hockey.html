@@ -499,11 +499,14 @@
     ghost: { emoji:'👻', color:'#c9d6ff' }    // ghost = puck goes nearly invisible
   };
   var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
-  var ITEM_LIFETIME_MS = 9000;   // an uncollected item disappears after this long
-  var ITEM_SPEED_BOOST = 34;     // px/frame-unit — well above the normal max speed
-  var ITEM_CURVE_MS = 550;       // how long the curve-steering lasts after the hit
-  var ITEM_CURVE_TURN_RATE = 0.032; // radians of turn per frame while curving
-  var ITEM_GHOST_MS = 2600;      // how long the puck stays nearly invisible
+  var ITEM_LIFETIME_MS = 13500;  // an uncollected item disappears after this long (1.5x)
+  var ITEM_SPEED_BOOST = 44;     // px/frame-unit — well above the normal max speed (+30%)
+  var ITEM_CURVE_MS = 825;       // how long the curve-steering lasts after the hit (1.5x)
+  var ITEM_CURVE_TURN_RATE = 0.0416; // radians of turn per frame while curving (+30%)
+  var ITEM_GHOST_MS = 3900;      // how long the puck stays nearly invisible (1.5x)
+  var ITEM_GHOST_ALPHA = 0.07;   // how visible the ghosted puck stays (was 0.1, now ~30% fainter)
+  var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
+  var ITEM_DRIFT_SPEED_MAX = 30;
 
   function randRange(a,b){ return a + Math.random()*(b-a); }
 
@@ -629,7 +632,13 @@
     var x = field.left + marginX + Math.random() * (field.w - marginX*2);
     var y = field.top + marginY + Math.random() * (field.h - marginY*2);
     var type = ITEM_TYPE_KEYS[Math.floor(Math.random() * ITEM_TYPE_KEYS.length)];
-    fieldItem = { type: type, x: x, y: y, r: r, bornAt: now };
+    var driftAngle = Math.random() * Math.PI * 2;
+    var driftSpeed = randRange(ITEM_DRIFT_SPEED_MIN, ITEM_DRIFT_SPEED_MAX);
+    fieldItem = {
+      type: type, x: x, y: y, r: r, bornAt: now,
+      vx: Math.cos(driftAngle) * driftSpeed,
+      vy: Math.sin(driftAngle) * driftSpeed
+    };
   }
 
   function tryPickupItem(m, now){
@@ -643,12 +652,21 @@
     }
   }
 
-  function updateItems(){
+  function updateItems(dt){
     var now = performance.now();
     if (!fieldItem){
       if (now >= itemSpawnAt) spawnItem(now);
       return;
     }
+
+    // slow, gentle drift around the court — bounces softly off the walls
+    fieldItem.x += fieldItem.vx * dt;
+    fieldItem.y += fieldItem.vy * dt;
+    if (fieldItem.x - fieldItem.r < field.left){ fieldItem.x = field.left + fieldItem.r; fieldItem.vx = Math.abs(fieldItem.vx); }
+    if (fieldItem.x + fieldItem.r > field.right){ fieldItem.x = field.right - fieldItem.r; fieldItem.vx = -Math.abs(fieldItem.vx); }
+    if (fieldItem.y - fieldItem.r < field.top){ fieldItem.y = field.top + fieldItem.r; fieldItem.vy = Math.abs(fieldItem.vy); }
+    if (fieldItem.y + fieldItem.r > field.bottom){ fieldItem.y = field.bottom - fieldItem.r; fieldItem.vy = -Math.abs(fieldItem.vy); }
+
     tryPickupItem(mallet.left, now);
     tryPickupItem(mallet.right, now);
     if (fieldItem && now - fieldItem.bornAt > ITEM_LIFETIME_MS){
@@ -1231,7 +1249,7 @@
     if (ghosted){
       // 'ghost' item effect: puck fades to near-invisible for a few seconds
       ctx.fillStyle = '#fff';
-      ctx.globalAlpha = 0.1;
+      ctx.globalAlpha = ITEM_GHOST_ALPHA;
       ctx.beginPath();
       ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
       ctx.fill();
@@ -1269,7 +1287,7 @@
     lastT = now;
 
     if (settings.mode === 'cpu'){ updateCPU(dt * 60); }
-    updateItems();
+    updateItems(dt); // dt here is real seconds, used for the item's drift movement
     stepPuck(dt * 60 * 0.5); // scale to keep speeds sane relative to px
 
     render();
