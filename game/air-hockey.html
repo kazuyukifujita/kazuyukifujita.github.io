@@ -492,11 +492,29 @@
   var GOAL_SIZE = { small: 0.7, normal: 1.0, large: 1.35 };
   var MALLET_SIZE = { small: 0.75, normal: 1.0, large: 1.3 };
 
+  // ITEM (power-up) definitions — each icon hints at its effect
+  var ITEM_TYPES = {
+    speed: { emoji:'⚡', color:'#ffe100' },   // lightning = super-fast return shot
+    curve: { emoji:'🌀', color:'#8b5cf6' },   // swirl = the shot bends off-line
+    ghost: { emoji:'👻', color:'#c9d6ff' }    // ghost = puck goes nearly invisible
+  };
+  var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
+  var ITEM_LIFETIME_MS = 9000;   // an uncollected item disappears after this long
+  var ITEM_SPEED_BOOST = 34;     // px/frame-unit — well above the normal max speed
+  var ITEM_CURVE_MS = 550;       // how long the curve-steering lasts after the hit
+  var ITEM_CURVE_TURN_RATE = 0.032; // radians of turn per frame while curving
+  var ITEM_GHOST_MS = 2600;      // how long the puck stays nearly invisible
+
+  function randRange(a,b){ return a + Math.random()*(b-a); }
+
+  var fieldItem = null;   // { type, x, y, r, bornAt } — the item currently sitting on the table
+  var itemSpawnAt = 0;    // performance.now() timestamp of the next spawn
+
   var score = { left:0, right:0 };
 
   var mallet = {
-    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false },
-    right: { x:0, y:0, vx:0, vy:0, r:40, active:false }
+    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null },
+    right: { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
 
@@ -505,7 +523,9 @@
     minSpeed: 3.4, baseMinSpeed: 3.4, maxMinSpeed: 13,
     maxSpeed: 27,
     rallyTime: 0,
-    rallyHits: 0
+    rallyHits: 0,
+    curveUntil: 0, curveDir: 0, // 'curve' item state
+    ghostUntil: 0               // 'ghost' item state
   };
 
   var cpu = {
@@ -566,6 +586,8 @@
   function sndHit(spd){ blip(180+Math.min(spd,20)*20,0.09,'square',0.16); }
   function sndGoal(){ blip(660,0.35,'sawtooth',0.22); setTimeout(function(){blip(880,0.3,'sawtooth',0.18);},90); }
   function sndClick(){ blip(500,0.05,'sine',0.1); }
+  function sndItemGet(){ blip(700,0.1,'sine',0.16); setTimeout(function(){blip(980,0.12,'sine',0.15);},70); }
+  function sndItemUse(){ blip(1300,0.16,'sawtooth',0.22); }
 
   /* ---------------------------------------------------------
      RESET / START
@@ -583,12 +605,77 @@
     puck.minSpeed = puck.baseMinSpeed; // start each point at the slow serve speed
     puck.rallyTime = 0;
     puck.rallyHits = 0;
+    puck.curveUntil = 0; puck.curveDir = 0;
+    puck.ghostUntil = 0;
     var dir = servingSide === 'right' ? 1 : -1;
     var ang = (Math.random()*0.6 - 0.3);
     puck.vx = Math.cos(ang) * puck.minSpeed * dir;
     puck.vy = Math.sin(ang) * puck.minSpeed;
+
+    // fresh start each point: clear any held/field item and queue the next spawn
+    fieldItem = null;
+    mallet.left.item = null;
+    mallet.right.item = null;
+    itemSpawnAt = performance.now() + randRange(4000, 7000);
   }
   field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
+
+  /* ---------------------------------------------------------
+     ITEMS (power-ups)
+  --------------------------------------------------------- */
+  function spawnItem(now){
+    var marginX = field.w * 0.16, marginY = field.h * 0.16;
+    var r = Math.min(field.w, field.h) * 0.045;
+    var x = field.left + marginX + Math.random() * (field.w - marginX*2);
+    var y = field.top + marginY + Math.random() * (field.h - marginY*2);
+    var type = ITEM_TYPE_KEYS[Math.floor(Math.random() * ITEM_TYPE_KEYS.length)];
+    fieldItem = { type: type, x: x, y: y, r: r, bornAt: now };
+  }
+
+  function tryPickupItem(m, now){
+    if (!fieldItem || m.item) return;
+    var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
+    if (Math.hypot(dx,dy) < m.r + fieldItem.r){
+      m.item = fieldItem.type;
+      fieldItem = null;
+      itemSpawnAt = now + randRange(6000, 11000);
+      sndItemGet();
+    }
+  }
+
+  function updateItems(){
+    var now = performance.now();
+    if (!fieldItem){
+      if (now >= itemSpawnAt) spawnItem(now);
+      return;
+    }
+    tryPickupItem(mallet.left, now);
+    tryPickupItem(mallet.right, now);
+    if (fieldItem && now - fieldItem.bornAt > ITEM_LIFETIME_MS){
+      fieldItem = null;
+      itemSpawnAt = now + randRange(6000, 11000);
+    }
+  }
+
+  // Consumes m's held item (if any) on a successful mallet-puck hit and
+  // applies its one-shot effect to the puck.
+  function applyItemEffect(m){
+    if (!m.item) return;
+    var type = m.item;
+    m.item = null; // used up — mallet glow reverts to normal immediately
+    var now = performance.now();
+    if (type === 'speed'){
+      var spd = Math.hypot(puck.vx, puck.vy) || 1;
+      puck.vx = puck.vx / spd * ITEM_SPEED_BOOST;
+      puck.vy = puck.vy / spd * ITEM_SPEED_BOOST;
+    } else if (type === 'curve'){
+      puck.curveUntil = now + ITEM_CURVE_MS;
+      puck.curveDir = Math.random() < 0.5 ? 1 : -1;
+    } else if (type === 'ghost'){
+      puck.ghostUntil = now + ITEM_GHOST_MS;
+    }
+    sndItemUse();
+  }
 
   function startGame(){
     score.left = 0; score.right = 0;
@@ -755,6 +842,12 @@
     }
     var targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, cpu.targetY));
 
+    // when not urgently returning the puck, go grab a power-up if one is out
+    if (fieldItem && !m.item && cpu.mode !== 'attack'){
+      targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, fieldItem.x));
+      targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, fieldItem.y));
+    }
+
     var dx = targetX - m.x, dy = targetY - m.y;
     var dist = Math.hypot(dx,dy);
     var speed = d.maxSpeed;
@@ -804,10 +897,28 @@
         puck.vy = puck.vy/spd*puck.maxSpeed;
       }
       sndHit(spd);
+
+      // if this mallet was holding a power-up, this hit fires it off
+      applyItemEffect(m);
     }
   }
 
   function stepPuck(dt){
+    // 'curve' item: steer the puck's heading (not its speed) for a short
+    // window right after the special hit, producing a bending trajectory.
+    if (puck.curveUntil){
+      if (performance.now() < puck.curveUntil){
+        var curSpd = Math.hypot(puck.vx, puck.vy);
+        if (curSpd > 0.01){
+          var ang = Math.atan2(puck.vy, puck.vx) + puck.curveDir * ITEM_CURVE_TURN_RATE;
+          puck.vx = Math.cos(ang) * curSpd;
+          puck.vy = Math.sin(ang) * curSpd;
+        }
+      } else {
+        puck.curveUntil = 0; puck.curveDir = 0;
+      }
+    }
+
     var steps = 2; // sub-steps for stability
     for (var s=0;s<steps;s++){
       puck.x += puck.vx/steps;
@@ -1063,22 +1174,82 @@
       ctx.lineWidth = 2;
       ctx.stroke();
     }
+
+    // holding an un-used power-up: wrap the mallet in a pulsing glow of the
+    // item's color. Reverts the instant the item is consumed (m.item=null).
+    if (m.item){
+      var itemInfo = ITEM_TYPES[m.item];
+      var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 150);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r * 1.3, 0, Math.PI*2);
+      ctx.strokeStyle = itemInfo.color;
+      ctx.shadowColor = itemInfo.color;
+      ctx.shadowBlur = 18 + 20 * pulse;
+      ctx.lineWidth = 5;
+      ctx.globalAlpha = 0.9;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+
+  function drawItem(){
+    if (!fieldItem) return;
+    var info = ITEM_TYPES[fieldItem.type];
+    var now = performance.now();
+    var bob = Math.sin(now / 260) * 4;
+    var pulse = 0.75 + 0.25 * Math.sin(now / 300);
+    var remaining = ITEM_LIFETIME_MS - (now - fieldItem.bornAt);
+
+    ctx.save();
+    if (remaining < 1200){ ctx.globalAlpha = Math.max(0.2, remaining / 1200); }
+    ctx.translate(fieldItem.x, fieldItem.y + bob);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, fieldItem.r, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(6,6,24,0.85)';
+    ctx.fill();
+    ctx.strokeStyle = info.color;
+    ctx.shadowColor = info.color;
+    ctx.shadowBlur = 14 + 16 * pulse;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.font = Math.round(fieldItem.r * 1.2) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(info.emoji, 0, 1);
+
     ctx.restore();
   }
 
   function drawPuck(){
+    var ghosted = puck.ghostUntil && performance.now() < puck.ghostUntil;
     ctx.save();
-    ctx.fillStyle = '#fff';
-    ctx.shadowColor = '#ffe100';
-    ctx.shadowBlur = 24;
-    ctx.beginPath();
-    ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
-    ctx.fill();
+    if (ghosted){
+      // 'ghost' item effect: puck fades to near-invisible for a few seconds
+      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = 0.1;
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#ffe100';
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
+      ctx.fill();
+    }
     ctx.restore();
+    if (puck.ghostUntil && performance.now() >= puck.ghostUntil){ puck.ghostUntil = 0; }
   }
 
   function render(){
     drawField();
+    drawItem();
     // iPad lies flat on the table: the left-side player views the screen
     // from the left edge, the right-side player from the right edge. Rotate
     // each player's icon to face them — left rotates 90° clockwise, right
@@ -1098,6 +1269,7 @@
     lastT = now;
 
     if (settings.mode === 'cpu'){ updateCPU(dt * 60); }
+    updateItems();
     stepPuck(dt * 60 * 0.5); // scale to keep speeds sane relative to px
 
     render();
