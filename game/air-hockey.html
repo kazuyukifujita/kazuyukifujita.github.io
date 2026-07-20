@@ -438,17 +438,32 @@
     var malletBaseR = scale * 0.073;
     var mlMul = MALLET_SIZE[settings.malletSizeLeft] || 1;
     var mrMul = MALLET_SIZE[settings.malletSizeRight] || 1;
-    mallet.left.r = malletBaseR * mlMul;
-    mallet.right.r = malletBaseR * mrMul;
+    // baseR is the player's chosen size (small/normal/large); r is the
+    // actual on-screen radius, which the 'giant' item buff can inflate
+    // temporarily on top of baseR (see applyGiantSize in the ITEMS section).
+    mallet.left.baseR = malletBaseR * mlMul;
+    mallet.right.baseR = malletBaseR * mrMul;
+    mallet.left.r = mallet.left.baseR;
+    mallet.right.r = mallet.right.baseR;
     puck.r = scale * 0.03;
 
-    // clamp bounds for each player's mallet (their half, inset by their own radius)
+    updateMalletBounds();
+  }
+
+  // Recomputes each mallet's allowed movement box from its CURRENT radius
+  // (mallet.r), which may be temporarily inflated by the 'giant' item.
+  // Called on resize and every frame while a giant buff is running.
+  function updateMalletBounds(){
+    var lMinX = field.left + mallet.left.r, lMaxX = field.midX - mallet.left.r;
+    var rMinX = field.midX + mallet.right.r, rMaxX = field.right - mallet.right.r;
+    if (lMinX > lMaxX){ var lc = (lMinX+lMaxX)/2; lMinX = lMaxX = lc; }
+    if (rMinX > rMaxX){ var rc = (rMinX+rMaxX)/2; rMinX = rMaxX = rc; }
     field.leftBounds = {
-      minX: field.left + mallet.left.r, maxX: field.midX - mallet.left.r,
+      minX: lMinX, maxX: lMaxX,
       minY: field.top + mallet.left.r, maxY: field.bottom - mallet.left.r
     };
     field.rightBounds = {
-      minX: field.midX + mallet.right.r, maxX: field.right - mallet.right.r,
+      minX: rMinX, maxX: rMaxX,
       minY: field.top + mallet.right.r, maxY: field.bottom - mallet.right.r
     };
   }
@@ -496,7 +511,8 @@
   var ITEM_TYPES = {
     speed: { emoji:'⚡', color:'#ffe100' },   // lightning = super-fast return shot
     curve: { emoji:'🌀', color:'#8b5cf6' },   // swirl = the shot bends off-line
-    ghost: { emoji:'👻', color:'#c9d6ff' }    // ghost = puck goes nearly invisible
+    ghost: { emoji:'👻', color:'#c9d6ff' },   // ghost = puck goes nearly invisible
+    giant: { emoji:'🍄', color:'#4ade80' }    // mushroom = mallet grows huge (classic power-up visual)
   };
   var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
   var ITEM_LIFETIME_MS = 13500;  // an uncollected item disappears after this long (1.5x)
@@ -509,6 +525,8 @@
   var ITEM_CURVE_TURN_RATE = 0.024; // radians of turn per frame while curving — strong, extreme bend
   var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
   var ITEM_GHOST_ALPHA = 0.035;  // how visible the ghosted puck stays — very faint
+  var ITEM_GIANT_BUFF_MS = 6000; // 'giant' item: mallet stays enlarged for this long
+  var ITEM_GIANT_MULT = 1.75;    // how much bigger the mallet gets while buffed
   var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
   var ITEM_DRIFT_SPEED_MAX = 30;
 
@@ -523,8 +541,8 @@
   var score = { left:0, right:0 };
 
   var mallet = {
-    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0, curveBuffUntil:0 },
-    right: { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0, curveBuffUntil:0 }
+    left:  { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 },
+    right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
 
@@ -651,17 +669,21 @@
   function tryPickupItem(m, now){
     var busy = m.item
       || (m.speedUntil && now < m.speedUntil)
-      || (m.curveBuffUntil && now < m.curveBuffUntil);
+      || (m.curveBuffUntil && now < m.curveBuffUntil)
+      || (m.giantUntil && now < m.giantUntil);
     if (!fieldItem || busy) return;
     var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
       if (fieldItem.type === 'speed'){
-        // 'speed' and 'curve' both power up the mallet itself the instant
-        // they're picked up — every hit landed during the buff window gets
-        // the effect, rather than waiting to consume a single pending charge.
+        // 'speed', 'curve' and 'giant' all power up the mallet itself the
+        // instant they're picked up — the effect applies continuously (or
+        // on every hit) for the buff window, rather than being a single
+        // pending charge consumed on the next hit like 'ghost' is.
         m.speedUntil = now + ITEM_SPEED_BUFF_MS;
       } else if (fieldItem.type === 'curve'){
         m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS;
+      } else if (fieldItem.type === 'giant'){
+        m.giantUntil = now + ITEM_GIANT_BUFF_MS;
       } else {
         m.item = fieldItem.type;
       }
@@ -669,6 +691,13 @@
       itemSpawnAt = now + randRange(5000, 9200); // 1.2x more frequent
       sndItemGet();
     }
+  }
+
+  // Scales m's radius up while a 'giant' buff is active, and back down to
+  // its normal chosen size (baseR) the instant the buff expires.
+  function applyGiantSize(m, now){
+    var mult = (m.giantUntil && now < m.giantUntil) ? ITEM_GIANT_MULT : 1;
+    m.r = m.baseR * mult;
   }
 
   function updateItems(dt){
@@ -679,6 +708,13 @@
     if (mallet.right.speedUntil && now >= mallet.right.speedUntil) mallet.right.speedUntil = 0;
     if (mallet.left.curveBuffUntil && now >= mallet.left.curveBuffUntil) mallet.left.curveBuffUntil = 0;
     if (mallet.right.curveBuffUntil && now >= mallet.right.curveBuffUntil) mallet.right.curveBuffUntil = 0;
+
+    // 'giant' buff continuously scales the mallet's radius (and the touch
+    // bounds that keep it on its own half) — recomputed every frame so it
+    // grows the instant it's picked up and shrinks back the instant it ends.
+    applyGiantSize(mallet.left, now);
+    applyGiantSize(mallet.right, now);
+    updateMalletBounds();
 
     if (!fieldItem){
       if (now >= itemSpawnAt) spawnItem(now);
@@ -733,6 +769,10 @@
     mallet.right.speedUntil = 0;
     mallet.left.curveBuffUntil = 0;
     mallet.right.curveBuffUntil = 0;
+    mallet.left.giantUntil = 0;
+    mallet.right.giantUntil = 0;
+    mallet.left.r = mallet.left.baseR;
+    mallet.right.r = mallet.right.baseR;
     itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
 
     resetPositions(Math.random() < 0.5 ? 'left':'right');
@@ -896,7 +936,8 @@
     // when not urgently returning the puck, go grab a power-up if one is out
     var cpuBusyWithItem = m.item
       || (m.speedUntil && performance.now() < m.speedUntil)
-      || (m.curveBuffUntil && performance.now() < m.curveBuffUntil);
+      || (m.curveBuffUntil && performance.now() < m.curveBuffUntil)
+      || (m.giantUntil && performance.now() < m.giantUntil);
     if (fieldItem && !cpuBusyWithItem && cpu.mode !== 'attack'){
       targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, fieldItem.x));
       targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, fieldItem.y));
@@ -1272,7 +1313,8 @@
     var nowT = performance.now();
     var poweredType = m.item
       || ((m.speedUntil && nowT < m.speedUntil) ? 'speed' : null)
-      || ((m.curveBuffUntil && nowT < m.curveBuffUntil) ? 'curve' : null);
+      || ((m.curveBuffUntil && nowT < m.curveBuffUntil) ? 'curve' : null)
+      || ((m.giantUntil && nowT < m.giantUntil) ? 'giant' : null);
     if (poweredType){
       var itemInfo = ITEM_TYPES[poweredType];
       var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 150);
