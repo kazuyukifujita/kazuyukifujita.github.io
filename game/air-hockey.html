@@ -1009,13 +1009,18 @@
       }
 
       // 'curve' item: while the buff is active, every hit sends the puck
-      // off on a fresh bending trajectory (doesn't consume the buff)
+      // off on a fresh bending trajectory (doesn't consume the buff). If
+      // the OTHER player (no active curve buff) returns a shot that's still
+      // curving, their hit breaks the curve and it flies straight again.
       if (m.curveBuffUntil && now < m.curveBuffUntil){
         puck.curveUntil = now + ITEM_CURVE_MS;
         puck.curveDir = Math.random() < 0.5 ? 1 : -1;
         puck.curveStart = now;
         puck.curveSeed = Math.random() * 1000;
         sndItemUse();
+      } else if (puck.curveUntil){
+        puck.curveUntil = 0;
+        puck.curveDir = 0;
       }
 
       // a pending 'ghost' item (if any) fires once, on this hit
