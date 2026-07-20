@@ -503,7 +503,9 @@
   var ITEM_SPEED_BOOST = 44;     // px/frame-unit — well above the normal max speed (+30%)
   var ITEM_SPEED_BUFF_MS = 6000; // 'speed' item: powers up the mallet itself for this long —
                                   // every hit landed during this window is a super-speed shot
-  var ITEM_CURVE_MS = 5000;      // how long the curve-steering lasts after the hit (~5s)
+  var ITEM_CURVE_BUFF_MS = 6000; // 'curve' item: powers up the mallet itself for this long —
+                                  // every hit landed during this window is a curving shot
+  var ITEM_CURVE_MS = 5000;      // how long a single curving shot keeps bending after being hit (~5s)
   var ITEM_CURVE_TURN_RATE = 0.024; // radians of turn per frame while curving — strong, extreme bend
   var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
   var ITEM_GHOST_ALPHA = 0.035;  // how visible the ghosted puck stays — very faint
@@ -521,8 +523,8 @@
   var score = { left:0, right:0 };
 
   var mallet = {
-    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0 },
-    right: { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0 }
+    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0, curveBuffUntil:0 },
+    right: { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0, curveBuffUntil:0 }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
 
@@ -647,15 +649,19 @@
   }
 
   function tryPickupItem(m, now){
-    var busy = m.item || (m.speedUntil && now < m.speedUntil);
+    var busy = m.item
+      || (m.speedUntil && now < m.speedUntil)
+      || (m.curveBuffUntil && now < m.curveBuffUntil);
     if (!fieldItem || busy) return;
     var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
       if (fieldItem.type === 'speed'){
-        // 'speed' works differently from the other two: it powers up the
-        // mallet itself the instant it's picked up, rather than waiting
-        // for the next hit to consume a single pending charge.
+        // 'speed' and 'curve' both power up the mallet itself the instant
+        // they're picked up — every hit landed during the buff window gets
+        // the effect, rather than waiting to consume a single pending charge.
         m.speedUntil = now + ITEM_SPEED_BUFF_MS;
+      } else if (fieldItem.type === 'curve'){
+        m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS;
       } else {
         m.item = fieldItem.type;
       }
@@ -668,9 +674,11 @@
   function updateItems(dt){
     var now = performance.now();
 
-    // clear an expired speed buff so the glow reverts to normal
+    // clear an expired speed/curve buff so the glow reverts to normal
     if (mallet.left.speedUntil && now >= mallet.left.speedUntil) mallet.left.speedUntil = 0;
     if (mallet.right.speedUntil && now >= mallet.right.speedUntil) mallet.right.speedUntil = 0;
+    if (mallet.left.curveBuffUntil && now >= mallet.left.curveBuffUntil) mallet.left.curveBuffUntil = 0;
+    if (mallet.right.curveBuffUntil && now >= mallet.right.curveBuffUntil) mallet.right.curveBuffUntil = 0;
 
     if (!fieldItem){
       if (now >= itemSpawnAt) spawnItem(now);
@@ -693,22 +701,17 @@
     }
   }
 
-  // Consumes m's pending curve/ghost item (if any) on a successful
-  // mallet-puck hit and applies its one-shot effect to the puck. The
-  // 'speed' item is handled separately in resolveMalletCollision since it's
-  // a timed mallet buff, not a single pending charge.
+  // Consumes m's pending 'ghost' item (if any) on a successful mallet-puck
+  // hit and applies its one-shot effect to the puck. 'speed' and 'curve' are
+  // handled separately in resolveMalletCollision since they're timed mallet
+  // buffs (every hit during the window triggers them), not a single pending
+  // charge that's used up on the first hit.
   function applyItemEffect(m){
     if (!m.item) return;
     var type = m.item;
     m.item = null; // used up — mallet glow reverts to normal immediately
-    var now = performance.now();
-    if (type === 'curve'){
-      puck.curveUntil = now + ITEM_CURVE_MS;
-      puck.curveDir = Math.random() < 0.5 ? 1 : -1;
-      puck.curveStart = now;
-      puck.curveSeed = Math.random() * 1000;
-    } else if (type === 'ghost'){
-      puck.ghostUntil = now + ITEM_GHOST_MS;
+    if (type === 'ghost'){
+      puck.ghostUntil = performance.now() + ITEM_GHOST_MS;
     }
     sndItemUse();
   }
@@ -728,6 +731,8 @@
     mallet.right.item = null;
     mallet.left.speedUntil = 0;
     mallet.right.speedUntil = 0;
+    mallet.left.curveBuffUntil = 0;
+    mallet.right.curveBuffUntil = 0;
     itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
 
     resetPositions(Math.random() < 0.5 ? 'left':'right');
@@ -889,7 +894,9 @@
     var targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, cpu.targetY));
 
     // when not urgently returning the puck, go grab a power-up if one is out
-    var cpuBusyWithItem = m.item || (m.speedUntil && performance.now() < m.speedUntil);
+    var cpuBusyWithItem = m.item
+      || (m.speedUntil && performance.now() < m.speedUntil)
+      || (m.curveBuffUntil && performance.now() < m.curveBuffUntil);
     if (fieldItem && !cpuBusyWithItem && cpu.mode !== 'attack'){
       targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, fieldItem.x));
       targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, fieldItem.y));
@@ -960,7 +967,17 @@
         sndItemUse();
       }
 
-      // a pending curve/ghost item (if any) fires once, on this hit
+      // 'curve' item: while the buff is active, every hit sends the puck
+      // off on a fresh bending trajectory (doesn't consume the buff)
+      if (m.curveBuffUntil && now < m.curveBuffUntil){
+        puck.curveUntil = now + ITEM_CURVE_MS;
+        puck.curveDir = Math.random() < 0.5 ? 1 : -1;
+        puck.curveStart = now;
+        puck.curveSeed = Math.random() * 1000;
+        sndItemUse();
+      }
+
+      // a pending 'ghost' item (if any) fires once, on this hit
       applyItemEffect(m);
     }
   }
@@ -1252,7 +1269,10 @@
     // holding an un-used power-up (or a live 'speed' buff): wrap the mallet
     // in a pulsing glow of the item's color. Reverts the instant it's used
     // up (m.item=null) or, for 'speed', the moment the buff timer ends.
-    var poweredType = m.item || ((m.speedUntil && performance.now() < m.speedUntil) ? 'speed' : null);
+    var nowT = performance.now();
+    var poweredType = m.item
+      || ((m.speedUntil && nowT < m.speedUntil) ? 'speed' : null)
+      || ((m.curveBuffUntil && nowT < m.curveBuffUntil) ? 'curve' : null);
     if (poweredType){
       var itemInfo = ITEM_TYPES[poweredType];
       var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 150);
