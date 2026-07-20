@@ -501,14 +501,17 @@
   var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
   var ITEM_LIFETIME_MS = 13500;  // an uncollected item disappears after this long (1.5x)
   var ITEM_SPEED_BOOST = 44;     // px/frame-unit — well above the normal max speed (+30%)
+  var ITEM_SPEED_BUFF_MS = 6000; // 'speed' item: powers up the mallet itself for this long —
+                                  // every hit landed during this window is a super-speed shot
   var ITEM_CURVE_MS = 5000;      // how long the curve-steering lasts after the hit (~5s)
-  // total turn angle is kept roughly constant (~150°) even though the curve
-  // now lasts much longer, so it reads as a long smooth arc, not a spin-out.
-  var ITEM_CURVE_TURN_RATE = 0.009; // radians of turn per frame while curving
+  var ITEM_CURVE_TURN_RATE = 0.024; // radians of turn per frame while curving — strong, extreme bend
   var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
   var ITEM_GHOST_ALPHA = 0.035;  // how visible the ghosted puck stays — very faint
   var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
   var ITEM_DRIFT_SPEED_MAX = 30;
+
+  var MALLET_HIT_ACCEL = 1.05;   // puck speeds up a bit on every mallet hit
+  var WALL_BOUNCE_DECEL = 0.94;  // puck slows down a bit on every wall bounce
 
   function randRange(a,b){ return a + Math.random()*(b-a); }
 
@@ -518,14 +521,14 @@
   var score = { left:0, right:0 };
 
   var mallet = {
-    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null },
-    right: { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null }
+    left:  { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0 },
+    right: { x:0, y:0, vx:0, vy:0, r:40, active:false, item:null, speedUntil:0 }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
 
   var puck = {
     x:0, y:0, vx:0, vy:0, r:20,
-    minSpeed: 3.4, baseMinSpeed: 3.4, maxMinSpeed: 13,
+    minSpeed: 2.8, baseMinSpeed: 2.8, maxMinSpeed: 13, // base serve speed trimmed a bit — hits now build speed up over a rally instead
     maxSpeed: 27,
     rallyTime: 0,
     rallyHits: 0,
@@ -644,10 +647,18 @@
   }
 
   function tryPickupItem(m, now){
-    if (!fieldItem || m.item) return;
+    var busy = m.item || (m.speedUntil && now < m.speedUntil);
+    if (!fieldItem || busy) return;
     var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
-      m.item = fieldItem.type;
+      if (fieldItem.type === 'speed'){
+        // 'speed' works differently from the other two: it powers up the
+        // mallet itself the instant it's picked up, rather than waiting
+        // for the next hit to consume a single pending charge.
+        m.speedUntil = now + ITEM_SPEED_BUFF_MS;
+      } else {
+        m.item = fieldItem.type;
+      }
       fieldItem = null;
       itemSpawnAt = now + randRange(5000, 9200); // 1.2x more frequent
       sndItemGet();
@@ -656,6 +667,11 @@
 
   function updateItems(dt){
     var now = performance.now();
+
+    // clear an expired speed buff so the glow reverts to normal
+    if (mallet.left.speedUntil && now >= mallet.left.speedUntil) mallet.left.speedUntil = 0;
+    if (mallet.right.speedUntil && now >= mallet.right.speedUntil) mallet.right.speedUntil = 0;
+
     if (!fieldItem){
       if (now >= itemSpawnAt) spawnItem(now);
       return;
@@ -677,18 +693,16 @@
     }
   }
 
-  // Consumes m's held item (if any) on a successful mallet-puck hit and
-  // applies its one-shot effect to the puck.
+  // Consumes m's pending curve/ghost item (if any) on a successful
+  // mallet-puck hit and applies its one-shot effect to the puck. The
+  // 'speed' item is handled separately in resolveMalletCollision since it's
+  // a timed mallet buff, not a single pending charge.
   function applyItemEffect(m){
     if (!m.item) return;
     var type = m.item;
     m.item = null; // used up — mallet glow reverts to normal immediately
     var now = performance.now();
-    if (type === 'speed'){
-      var spd = Math.hypot(puck.vx, puck.vy) || 1;
-      puck.vx = puck.vx / spd * ITEM_SPEED_BOOST;
-      puck.vy = puck.vy / spd * ITEM_SPEED_BOOST;
-    } else if (type === 'curve'){
+    if (type === 'curve'){
       puck.curveUntil = now + ITEM_CURVE_MS;
       puck.curveDir = Math.random() < 0.5 ? 1 : -1;
       puck.curveStart = now;
@@ -712,6 +726,8 @@
     fieldItem = null;
     mallet.left.item = null;
     mallet.right.item = null;
+    mallet.left.speedUntil = 0;
+    mallet.right.speedUntil = 0;
     itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
 
     resetPositions(Math.random() < 0.5 ? 'left':'right');
@@ -873,7 +889,8 @@
     var targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, cpu.targetY));
 
     // when not urgently returning the puck, go grab a power-up if one is out
-    if (fieldItem && !m.item && cpu.mode !== 'attack'){
+    var cpuBusyWithItem = m.item || (m.speedUntil && performance.now() < m.speedUntil);
+    if (fieldItem && !cpuBusyWithItem && cpu.mode !== 'attack'){
       targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, fieldItem.x));
       targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, fieldItem.y));
     }
@@ -918,8 +935,13 @@
       }
       // add a bit of mallet's own motion as extra kick — boosted so a fast
       // swing visibly sends the puck flying faster than a slow tap
-      puck.vx += m.vx * 0.55;
-      puck.vy += m.vy * 0.55;
+      puck.vx += m.vx * 0.75;
+      puck.vy += m.vy * 0.75;
+
+      // every mallet hit adds a little energy overall, on top of the swing
+      // kick above — table-tennis-style, the puck gets livelier as it's hit
+      puck.vx *= MALLET_HIT_ACCEL;
+      puck.vy *= MALLET_HIT_ACCEL;
 
       var spd = Math.hypot(puck.vx, puck.vy);
       if (spd > puck.maxSpeed){
@@ -928,7 +950,17 @@
       }
       sndHit(spd);
 
-      // if this mallet was holding a power-up, this hit fires it off
+      // 'speed' item: while the buff is active, every hit fires a
+      // super-speed shot (this can push past the normal maxSpeed cap)
+      var now = performance.now();
+      if (m.speedUntil && now < m.speedUntil){
+        var spd2 = Math.hypot(puck.vx, puck.vy) || 1;
+        puck.vx = puck.vx / spd2 * ITEM_SPEED_BOOST;
+        puck.vy = puck.vy / spd2 * ITEM_SPEED_BOOST;
+        sndItemUse();
+      }
+
+      // a pending curve/ghost item (if any) fires once, on this hit
       applyItemEffect(m);
     }
   }
@@ -966,10 +998,12 @@
       if (puck.y - puck.r < field.top){
         puck.y = field.top + puck.r;
         puck.vy = -puck.vy;
+        puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL; // walls sap a little energy
         sndWall();
       } else if (puck.y + puck.r > field.bottom){
         puck.y = field.bottom - puck.r;
         puck.vy = -puck.vy;
+        puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
         sndWall();
       }
 
@@ -983,6 +1017,7 @@
         } else {
           puck.x = field.left + puck.r;
           puck.vx = -puck.vx;
+          puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
           sndWall();
         }
       }
@@ -996,6 +1031,7 @@
         } else {
           puck.x = field.right - puck.r;
           puck.vx = -puck.vx;
+          puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
           sndWall();
         }
       }
@@ -1213,10 +1249,12 @@
       ctx.stroke();
     }
 
-    // holding an un-used power-up: wrap the mallet in a pulsing glow of the
-    // item's color. Reverts the instant the item is consumed (m.item=null).
-    if (m.item){
-      var itemInfo = ITEM_TYPES[m.item];
+    // holding an un-used power-up (or a live 'speed' buff): wrap the mallet
+    // in a pulsing glow of the item's color. Reverts the instant it's used
+    // up (m.item=null) or, for 'speed', the moment the buff timer ends.
+    var poweredType = m.item || ((m.speedUntil && performance.now() < m.speedUntil) ? 'speed' : null);
+    if (poweredType){
+      var itemInfo = ITEM_TYPES[poweredType];
       var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 150);
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.r * 1.3, 0, Math.PI*2);
