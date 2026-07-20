@@ -506,7 +506,7 @@
   // now lasts much longer, so it reads as a long smooth arc, not a spin-out.
   var ITEM_CURVE_TURN_RATE = 0.009; // radians of turn per frame while curving
   var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
-  var ITEM_GHOST_ALPHA = 0.07;   // how visible the ghosted puck stays (was 0.1, now ~30% fainter)
+  var ITEM_GHOST_ALPHA = 0.035;  // how visible the ghosted puck stays — very faint
   var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
   var ITEM_DRIFT_SPEED_MAX = 30;
 
@@ -529,7 +529,7 @@
     maxSpeed: 27,
     rallyTime: 0,
     rallyHits: 0,
-    curveUntil: 0, curveDir: 0, // 'curve' item state
+    curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, // 'curve' item state
     ghostUntil: 0               // 'ghost' item state
   };
 
@@ -617,11 +617,11 @@
     puck.vx = Math.cos(ang) * puck.minSpeed * dir;
     puck.vy = Math.sin(ang) * puck.minSpeed;
 
-    // fresh start each point: clear any held/field item and queue the next spawn
-    fieldItem = null;
-    mallet.left.item = null;
-    mallet.right.item = null;
-    itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
+    // Note: intentionally NOT touching fieldItem / mallet.left.item /
+    // mallet.right.item / itemSpawnAt here — a floating item on the table
+    // and any item a player is holding both carry over across a goal, so a
+    // player who grabbed an item but hadn't used it yet can still use it on
+    // the very next point.
   }
   field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
 
@@ -691,6 +691,8 @@
     } else if (type === 'curve'){
       puck.curveUntil = now + ITEM_CURVE_MS;
       puck.curveDir = Math.random() < 0.5 ? 1 : -1;
+      puck.curveStart = now;
+      puck.curveSeed = Math.random() * 1000;
     } else if (type === 'ghost'){
       puck.ghostUntil = now + ITEM_GHOST_MS;
     }
@@ -704,6 +706,14 @@
     document.getElementById('tagRight').textContent = settings.mode==='cpu' ? 'CPU' : 'PLAYER 2';
     document.getElementById('targetInfo').textContent = settings.target + '点先取';
     resize();
+
+    // items only reset for a brand-new match (rematch/new game) — not
+    // between points within the same match
+    fieldItem = null;
+    mallet.left.item = null;
+    mallet.right.item = null;
+    itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
+
     resetPositions(Math.random() < 0.5 ? 'left':'right');
     state = STATE_PLAY;
     show('play');
@@ -926,11 +936,19 @@
   function stepPuck(dt){
     // 'curve' item: steer the puck's heading (not its speed) for a short
     // window right after the special hit, producing a bending trajectory.
+    // The turn strength wobbles over time (two overlapping sine waves) so
+    // the bend feels irregular/unpredictable rather than one smooth arc —
+    // it'll surge, ease off, and sometimes briefly reverse.
     if (puck.curveUntil){
-      if (performance.now() < puck.curveUntil){
+      var now = performance.now();
+      if (now < puck.curveUntil){
         var curSpd = Math.hypot(puck.vx, puck.vy);
         if (curSpd > 0.01){
-          var ang = Math.atan2(puck.vy, puck.vx) + puck.curveDir * ITEM_CURVE_TURN_RATE;
+          var elapsed = now - puck.curveStart;
+          var wobble = Math.sin(elapsed*0.006 + puck.curveSeed) * 0.75
+                     + Math.sin(elapsed*0.017 + puck.curveSeed*2.3) * 0.55;
+          var turnAmt = ITEM_CURVE_TURN_RATE * (1 + wobble);
+          var ang = Math.atan2(puck.vy, puck.vx) + puck.curveDir * turnAmt;
           puck.vx = Math.cos(ang) * curSpd;
           puck.vy = Math.sin(ang) * curSpd;
         }
