@@ -501,9 +501,11 @@
   var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
   var ITEM_LIFETIME_MS = 13500;  // an uncollected item disappears after this long (1.5x)
   var ITEM_SPEED_BOOST = 44;     // px/frame-unit — well above the normal max speed (+30%)
-  var ITEM_CURVE_MS = 825;       // how long the curve-steering lasts after the hit (1.5x)
-  var ITEM_CURVE_TURN_RATE = 0.0416; // radians of turn per frame while curving (+30%)
-  var ITEM_GHOST_MS = 3900;      // how long the puck stays nearly invisible (1.5x)
+  var ITEM_CURVE_MS = 5000;      // how long the curve-steering lasts after the hit (~5s)
+  // total turn angle is kept roughly constant (~150°) even though the curve
+  // now lasts much longer, so it reads as a long smooth arc, not a spin-out.
+  var ITEM_CURVE_TURN_RATE = 0.009; // radians of turn per frame while curving
+  var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
   var ITEM_GHOST_ALPHA = 0.07;   // how visible the ghosted puck stays (was 0.1, now ~30% fainter)
   var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
   var ITEM_DRIFT_SPEED_MAX = 30;
@@ -619,7 +621,7 @@
     fieldItem = null;
     mallet.left.item = null;
     mallet.right.item = null;
-    itemSpawnAt = performance.now() + randRange(4000, 7000);
+    itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
   }
   field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
 
@@ -647,7 +649,7 @@
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
       m.item = fieldItem.type;
       fieldItem = null;
-      itemSpawnAt = now + randRange(6000, 11000);
+      itemSpawnAt = now + randRange(5000, 9200); // 1.2x more frequent
       sndItemGet();
     }
   }
@@ -671,7 +673,7 @@
     tryPickupItem(mallet.right, now);
     if (fieldItem && now - fieldItem.bornAt > ITEM_LIFETIME_MS){
       fieldItem = null;
-      itemSpawnAt = now + randRange(6000, 11000);
+      itemSpawnAt = now + randRange(5000, 9200); // 1.2x more frequent
     }
   }
 
