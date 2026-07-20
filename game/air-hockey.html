@@ -524,8 +524,12 @@
   var ITEM_CURVE_MS = 5000;      // how long a single curving shot keeps bending after being hit (~5s)
   var ITEM_CURVE_TURN_RATE = 0.024; // radians of turn per frame while curving — strong, extreme bend
   var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
-  var ITEM_GHOST_ALPHA = 0.035;  // how visible the ghosted puck stays — very faint
-  var ITEM_GIANT_BUFF_MS = 6000; // 'giant' item: mallet stays enlarged for this long
+  var ITEM_GHOST_COLOR = '#20223a';    // dark, close to the table color — barely readable at rest
+  var ITEM_GHOST_ALPHA = 0.018;        // how visible the ghosted puck stays normally — nearly nothing
+  var ITEM_GHOST_FLASH_COLOR = '#c9d6ff'; // pale ghostly glow shown briefly on contact
+  var ITEM_GHOST_FLASH_ALPHA = 0.55;      // how visible it flashes to on a wall/mallet hit
+  var ITEM_GHOST_FLASH_MS = 220;          // how long that contact flash lasts
+  var ITEM_GIANT_BUFF_MS = 9000; // 'giant' item: mallet stays enlarged for this long
   var ITEM_GIANT_MULT = 1.75;    // how much bigger the mallet gets while buffed
   var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
   var ITEM_DRIFT_SPEED_MAX = 30;
@@ -553,7 +557,7 @@
     rallyTime: 0,
     rallyHits: 0,
     curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, // 'curve' item state
-    ghostUntil: 0               // 'ghost' item state
+    ghostUntil: 0, ghostFlashUntil: 0 // 'ghost' item state
   };
 
   var cpu = {
@@ -698,6 +702,16 @@
   function applyGiantSize(m, now){
     var mult = (m.giantUntil && now < m.giantUntil) ? ITEM_GIANT_MULT : 1;
     m.r = m.baseR * mult;
+  }
+
+  // 'ghost' item: the puck stays almost invisible, but briefly flashes into
+  // view the instant it touches a wall or a mallet — called from those
+  // collision spots so players get just enough of a cue to track it.
+  function ghostContactFlash(){
+    var now = performance.now();
+    if (puck.ghostUntil && now < puck.ghostUntil){
+      puck.ghostFlashUntil = now + ITEM_GHOST_FLASH_MS;
+    }
   }
 
   function updateItems(dt){
@@ -997,6 +1011,7 @@
         puck.vy = puck.vy/spd*puck.maxSpeed;
       }
       sndHit(spd);
+      ghostContactFlash();
 
       // 'speed' item: while the buff is active, every hit fires a
       // super-speed shot (this can push past the normal maxSpeed cap)
@@ -1062,12 +1077,12 @@
         puck.y = field.top + puck.r;
         puck.vy = -puck.vy;
         puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL; // walls sap a little energy
-        sndWall();
+        sndWall(); ghostContactFlash();
       } else if (puck.y + puck.r > field.bottom){
         puck.y = field.bottom - puck.r;
         puck.vy = -puck.vy;
         puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
-        sndWall();
+        sndWall(); ghostContactFlash();
       }
 
       // left wall / goal
@@ -1081,7 +1096,7 @@
           puck.x = field.left + puck.r;
           puck.vx = -puck.vx;
           puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
-          sndWall();
+          sndWall(); ghostContactFlash();
         }
       }
       // right wall / goal
@@ -1095,7 +1110,7 @@
           puck.x = field.right - puck.r;
           puck.vx = -puck.vx;
           puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
-          sndWall();
+          sndWall(); ghostContactFlash();
         }
       }
     }
@@ -1369,12 +1384,20 @@
   }
 
   function drawPuck(){
-    var ghosted = puck.ghostUntil && performance.now() < puck.ghostUntil;
+    var now = performance.now();
+    var ghosted = puck.ghostUntil && now < puck.ghostUntil;
     ctx.save();
     if (ghosted){
-      // 'ghost' item effect: puck fades to near-invisible for a few seconds
-      ctx.fillStyle = '#fff';
-      ctx.globalAlpha = ITEM_GHOST_ALPHA;
+      // 'ghost' item effect: the puck stays nearly invisible (a dark color,
+      // barely-there alpha) except right after it touches a wall or mallet,
+      // when it briefly flashes into a pale, visible ghost-glow.
+      var flashing = puck.ghostFlashUntil && now < puck.ghostFlashUntil;
+      ctx.fillStyle = flashing ? ITEM_GHOST_FLASH_COLOR : ITEM_GHOST_COLOR;
+      ctx.globalAlpha = flashing ? ITEM_GHOST_FLASH_ALPHA : ITEM_GHOST_ALPHA;
+      if (flashing){
+        ctx.shadowColor = ITEM_GHOST_FLASH_COLOR;
+        ctx.shadowBlur = 16;
+      }
       ctx.beginPath();
       ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
       ctx.fill();
@@ -1387,7 +1410,7 @@
       ctx.fill();
     }
     ctx.restore();
-    if (puck.ghostUntil && performance.now() >= puck.ghostUntil){ puck.ghostUntil = 0; }
+    if (puck.ghostUntil && now >= puck.ghostUntil){ puck.ghostUntil = 0; puck.ghostFlashUntil = 0; }
   }
 
   function render(){
