@@ -25,6 +25,26 @@
   #stage{ position:fixed; inset:0; }
   canvas{ position:absolute; inset:0; display:block; width:100%; height:100%; }
 
+  /* Phone portrait lock: iOS Safari has no working orientation-lock API, so
+     this is the standard CSS-only fallback — when a small (phone-sized)
+     screen reports landscape, rotate the whole page -90deg so it always
+     RENDERS portrait regardless of how the phone is physically held.
+     max-height (not max-width) is used because in landscape the viewport's
+     height equals the device's short side — phones are well under 500px
+     there, while iPads stay well above it, so this never touches iPad. */
+  @media screen and (orientation: landscape) and (max-height: 520px){
+    html{
+      transform: rotate(-90deg);
+      transform-origin: left top;
+      width: 100vh;
+      height: 100vw;
+      overflow: hidden;
+      position: fixed;
+      top: 100%;
+      left: 0;
+    }
+  }
+
   .glow-text{
     color:#fff;
     text-shadow:0 0 6px var(--neon-cyan), 0 0 16px var(--neon-cyan), 0 0 2px #fff;
@@ -73,6 +93,16 @@
   .subtitle{
     font-size:clamp(12px,2.4vw,16px);
     color:#8fe8ff; opacity:0.85; margin-top:-10px; text-align:center;
+  }
+
+  /* Title screen: big logo + just the mode choice */
+  .title-huge{
+    font-size:clamp(48px,11vw,96px);
+    line-height:1.05;
+    margin-bottom:14px;
+  }
+  .title-mode-btn{
+    padding:22px 40px; font-size:19px; min-width:180px;
   }
 
   .group{
@@ -255,19 +285,24 @@
     </div>
   </div>
 
-  <!-- MAIN MENU -->
-  <div id="menu" class="overlay">
+  <!-- TITLE SCREEN -->
+  <div id="titleScreen" class="overlay">
     <div class="panel">
-      <div class="title">NEON AIR HOCKEY</div>
+      <div class="title title-huge">NEON<br>AIR HOCKEY</div>
       <div class="subtitle">iPadを横向きにして、2本指(またはお2人)でどうぞ</div>
-
-      <div class="group">
-        <div class="group-label">モード</div>
-        <div class="row">
-          <button id="modeCpu" class="mode-btn selected" data-mode="cpu">CPU対戦</button>
-          <button id="mode2p" class="mode-btn" data-mode="2p">2人対戦</button>
-        </div>
+      <div class="row" style="margin-top:18px;">
+        <button id="titleModeCpu" class="mode-btn primary title-mode-btn selected" data-mode="cpu">CPU対戦</button>
+        <button id="titleMode2p" class="mode-btn primary title-mode-btn" data-mode="2p">2人対戦</button>
       </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="menu" class="overlay hidden">
+    <div class="panel">
+      <button id="backToTitleBtn" class="ghost" style="align-self:flex-start; font-size:12px; padding:7px 14px;">← モード選択に戻る</button>
+      <div class="title" style="font-size:clamp(22px,5vw,30px); margin-bottom:0;">NEON AIR HOCKEY</div>
+      <div class="subtitle" id="settingsModeLabel" style="margin-top:-6px;"></div>
 
       <div class="group" id="diffGroup">
         <div class="group-label">CPUの強さ</div>
@@ -320,6 +355,16 @@
           </div>
         </div>
         <div class="group-note goal-block" id="goalNote">ゴール：小=守りやすい(有利)　大=守りにくい(不利)　※2人対戦のみ</div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">アイテムの出現頻度</div>
+        <div class="row">
+          <button class="freq-btn" data-freq="off">出現しない</button>
+          <button class="freq-btn" data-freq="low">少ない</button>
+          <button class="freq-btn selected" data-freq="mid">普通</button>
+          <button class="freq-btn" data-freq="high">多い</button>
+        </div>
       </div>
 
       <div class="group">
@@ -484,7 +529,8 @@
     malletSizeLeft: 'normal', // 'small' | 'normal' | 'large' — per player, any mode
     malletSizeRight: 'normal',
     iconLeft: 'none',   // 'none' | 'dad' | 'girl' | 'baby' | 'mom'
-    iconRight: 'none'
+    iconRight: 'none',
+    itemFrequency: 'mid' // 'off' | 'low' | 'mid' | 'high' — 'mid' is the original baseline rate
   };
 
   var ICON_SRC = { dad:'icons/dad.png', girl:'icons/girl.png', baby:'icons/baby.png', mom:'icons/mom.png' };
@@ -534,6 +580,12 @@
   var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
   var ITEM_DRIFT_SPEED_MAX = 30;
 
+  // spawn-interval multiplier per itemFrequency setting — applied on top of
+  // the baseline (1.2x) intervals below. 'off' is handled separately (no
+  // spawning at all), so it isn't in this map.
+  var ITEM_FREQ_INTERVAL_MULT = { low: 1.7, mid: 1.0, high: 0.55 };
+  function itemFreqMult(){ return ITEM_FREQ_INTERVAL_MULT[settings.itemFrequency] || 1; }
+
   var MALLET_HIT_ACCEL = 1.05;   // puck speeds up a bit on every mallet hit
   var WALL_BOUNCE_DECEL = 0.94;  // puck slows down a bit on every wall bounce
 
@@ -549,6 +601,12 @@
     right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
+  // Last known finger position per side (in canvas coordinates), tracked
+  // continuously even while input is frozen (e.g. during a goal
+  // celebration) so a held-but-stationary finger can be re-synced the
+  // instant play resumes instead of leaving the mallet stuck wherever it
+  // was reset to. See resyncHeldTouches().
+  var lastTouchClientPos = { left: null, right: null };
 
   var puck = {
     x:0, y:0, vx:0, vy:0, r:20,
@@ -680,11 +738,11 @@
   }
 
   function tryPickupItem(m, now){
-    var busy = m.item
-      || (m.speedUntil && now < m.speedUntil)
-      || (m.curveBuffUntil && now < m.curveBuffUntil)
-      || (m.giantUntil && now < m.giantUntil);
-    if (!fieldItem || busy) return;
+    // Picking up an item while another (or the same) one is already active
+    // is allowed on purpose — effects stack rather than being blocked, so
+    // e.g. grabbing 'speed' while 'curve' is still active gives a curving
+    // super-fast shot. Each buff just lives in its own field on the mallet.
+    if (!fieldItem) return;
     var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
       if (fieldItem.type === 'speed'){
@@ -701,7 +759,7 @@
         m.item = fieldItem.type;
       }
       fieldItem = null;
-      itemSpawnAt = now + randRange(5000, 9200); // 1.2x more frequent
+      itemSpawnAt = now + randRange(5000, 9200) * itemFreqMult(); // 1.2x baseline frequency
       sndItemGet();
     }
   }
@@ -711,6 +769,18 @@
   function applyGiantSize(m, now){
     var mult = (m.giantUntil && now < m.giantUntil) ? ITEM_GIANT_MULT : 1;
     m.r = m.baseR * mult;
+  }
+
+  // Returns the list of item effects currently active on mallet m (can be
+  // more than one at once, since effects stack) — used to draw one glow
+  // ring per active effect.
+  function getActiveMalletBuffs(m, now){
+    var types = [];
+    if (m.item) types.push(m.item); // pending 'ghost' charge
+    if (m.speedUntil && now < m.speedUntil) types.push('speed');
+    if (m.curveBuffUntil && now < m.curveBuffUntil) types.push('curve');
+    if (m.giantUntil && now < m.giantUntil) types.push('giant');
+    return types;
   }
 
   // 'ghost' item: the puck stays almost invisible, but briefly flashes into
@@ -739,6 +809,8 @@
     applyGiantSize(mallet.right, now);
     updateMalletBounds();
 
+    if (settings.itemFrequency === 'off') return; // items disabled entirely for this match
+
     if (!fieldItem){
       if (now >= itemSpawnAt) spawnItem(now);
       return;
@@ -756,7 +828,7 @@
     tryPickupItem(mallet.right, now);
     if (fieldItem && now - fieldItem.bornAt > ITEM_LIFETIME_MS){
       fieldItem = null;
-      itemSpawnAt = now + randRange(5000, 9200); // 1.2x more frequent
+      itemSpawnAt = now + randRange(5000, 9200) * itemFreqMult(); // 1.2x baseline frequency
     }
   }
 
@@ -796,7 +868,7 @@
     mallet.right.giantUntil = 0;
     mallet.left.r = mallet.left.baseR;
     mallet.right.r = mallet.right.baseR;
-    itemSpawnAt = performance.now() + randRange(3300, 5800); // 1.2x more frequent
+    itemSpawnAt = performance.now() + randRange(3300, 5800) * itemFreqMult(); // 1.2x baseline frequency
 
     resetPositions(Math.random() < 0.5 ? 'left':'right');
     state = STATE_PLAY;
@@ -811,10 +883,11 @@
   }
 
   function show(which){
-    document.getElementById('menu').classList.toggle('hidden', which!=='menu');
+    document.getElementById('titleScreen').classList.toggle('hidden', which!=='title');
+    document.getElementById('menu').classList.toggle('hidden', which!=='settings');
     document.getElementById('pauseOverlay').classList.toggle('hidden', which!=='pause');
     document.getElementById('endOverlay').classList.toggle('hidden', which!=='end');
-    document.getElementById('hud').classList.toggle('hidden', which==='menu');
+    document.getElementById('hud').classList.toggle('hidden', which==='title' || which==='settings');
   }
 
   /* ---------------------------------------------------------
@@ -850,11 +923,15 @@
       var b = side==='left' ? field.leftBounds : field.rightBounds;
       var p = clampTo(b, x, y);
       mallet[side].x = p.x; mallet[side].y = p.y;
+      lastTouchClientPos[side] = { x: x, y: y };
     }
   }, {passive:false});
 
   canvas.addEventListener('touchmove', function(e){
-    if (state !== STATE_PLAY) return;
+    // Always prevent default (stop scroll/bounce) and keep tracking the
+    // finger's latest position, even during a brief input freeze (e.g. a
+    // goal celebration) — only the actual mallet movement is gated on
+    // STATE_PLAY below, so nothing is lost while frozen.
     e.preventDefault();
     var rect = canvas.getBoundingClientRect();
     for (var i=0;i<e.changedTouches.length;i++){
@@ -863,6 +940,8 @@
       for (var k in touchMap){ if (touchMap[k]===t.identifier) side = k; }
       if (!side) continue;
       var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      lastTouchClientPos[side] = { x: x, y: y };
+      if (state !== STATE_PLAY) continue;
       var b = side==='left' ? field.leftBounds : field.rightBounds;
       var p = clampTo(b, x, y);
       var m = mallet[side];
@@ -879,9 +958,26 @@
           delete touchMap[k];
           mallet[k].active = false;
           mallet[k].vx = 0; mallet[k].vy = 0;
+          lastTouchClientPos[k] = null;
         }
       }
     }
+  }
+
+  // Snaps each side's mallet to wherever its finger actually is right now,
+  // for any touch that stayed down through a goal celebration. Without
+  // this, a finger that stopped moving during the freeze would leave the
+  // mallet stranded at its just-reset home position until the next
+  // touchmove event — i.e. the exact "touching but mallet won't follow"
+  // symptom reported after scoring.
+  function resyncHeldTouches(){
+    ['left','right'].forEach(function(side){
+      if (touchMap[side] === undefined || !lastTouchClientPos[side]) return;
+      var b = side==='left' ? field.leftBounds : field.rightBounds;
+      var p = clampTo(b, lastTouchClientPos[side].x, lastTouchClientPos[side].y);
+      var m = mallet[side];
+      m.x = p.x; m.y = p.y; m.vx = 0; m.vy = 0;
+    });
   }
   canvas.addEventListener('touchend', releaseTouch, {passive:false});
   canvas.addEventListener('touchcancel', releaseTouch, {passive:false});
@@ -938,6 +1034,19 @@
       if (puck.vx > 0){
         // puck heading toward CPU: predict intercept
         var predY = predictPuckYAtX(m.x);
+
+        // 'hard' plays smarter, not just faster: aim the return shot toward
+        // whichever goal corner is farthest from the human's current mallet
+        // position, by approaching the puck slightly off-center so the
+        // deflection angles away from where they're standing.
+        if (settings.difficulty === 'hard'){
+          var midY = field.midYSafe();
+          var humanY = mallet.left.y;
+          var aimUp = humanY > midY; // human is low half -> aim the shot high, and vice versa
+          var aimBias = m.r * 0.5;
+          predY += aimUp ? -aimBias : aimBias;
+        }
+
         predY += (Math.random()*2-1) * d.error;
         cpu.targetY = predY;
         cpu.mode = 'attack';
@@ -947,7 +1056,11 @@
       }
     }
 
-    var targetX = homeX;
+    // even while defending/waiting, more aggressive difficulties hover
+    // closer to the midline instead of always retreating all the way home —
+    // this makes 'hard' feel like it's constantly pressuring, not just
+    // reacting once the puck is already incoming.
+    var targetX = homeX - (homeX - field.midX) * (d.aggressiveness * 0.4);
     if (cpu.mode === 'attack' && puck.vx > 0){
       // move forward to meet puck if it's on CPU's side and close
       if (puck.x > field.midX){
@@ -957,11 +1070,9 @@
     var targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, cpu.targetY));
 
     // when not urgently returning the puck, go grab a power-up if one is out
-    var cpuBusyWithItem = m.item
-      || (m.speedUntil && performance.now() < m.speedUntil)
-      || (m.curveBuffUntil && performance.now() < m.curveBuffUntil)
-      || (m.giantUntil && performance.now() < m.giantUntil);
-    if (fieldItem && !cpuBusyWithItem && cpu.mode !== 'attack'){
+    // — items stack now, so the CPU always benefits from grabbing another
+    // one even if it's already buffed
+    if (fieldItem && cpu.mode !== 'attack'){
       targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, fieldItem.x));
       targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, fieldItem.y));
     }
@@ -1184,6 +1295,7 @@
         endGame();
       } else {
         resetPositions(scoredSide === 'left' ? 'right' : 'left');
+        resyncHeldTouches(); // fingers held through the celebration snap to their real position
         state = STATE_PLAY;
         lastT = performance.now();
         requestAnimationFrame(loop);
@@ -1360,27 +1472,25 @@
       ctx.stroke();
     }
 
-    // holding an un-used power-up (or a live 'speed' buff): wrap the mallet
-    // in a pulsing glow of the item's color. Reverts the instant it's used
-    // up (m.item=null) or, for 'speed', the moment the buff timer ends.
+    // holding any un-used/active power-ups: wrap the mallet in a pulsing
+    // glow ring per effect (items now stack, so more than one can be lit up
+    // at once — each gets its own ring at an increasing radius). Each ring
+    // disappears the instant that specific effect is used up or expires.
     var nowT = performance.now();
-    var poweredType = m.item
-      || ((m.speedUntil && nowT < m.speedUntil) ? 'speed' : null)
-      || ((m.curveBuffUntil && nowT < m.curveBuffUntil) ? 'curve' : null)
-      || ((m.giantUntil && nowT < m.giantUntil) ? 'giant' : null);
-    if (poweredType){
-      var itemInfo = ITEM_TYPES[poweredType];
-      var pulse = 0.6 + 0.4 * Math.sin(performance.now() / 150);
+    var activeTypes = getActiveMalletBuffs(m, nowT);
+    activeTypes.forEach(function(type, i){
+      var itemInfo = ITEM_TYPES[type];
+      var pulse = 0.6 + 0.4 * Math.sin((nowT + i*90) / 150);
       ctx.beginPath();
-      ctx.arc(m.x, m.y, m.r * 1.3, 0, Math.PI*2);
+      ctx.arc(m.x, m.y, m.r * (1.3 + i*0.24), 0, Math.PI*2);
       ctx.strokeStyle = itemInfo.color;
       ctx.shadowColor = itemInfo.color;
-      ctx.shadowBlur = 18 + 20 * pulse;
-      ctx.lineWidth = 5;
-      ctx.globalAlpha = 0.9;
+      ctx.shadowBlur = 16 + 18 * pulse;
+      ctx.lineWidth = 4.5;
+      ctx.globalAlpha = 0.88;
       ctx.stroke();
       ctx.globalAlpha = 1;
-    }
+    });
 
     ctx.restore();
   }
@@ -1502,8 +1612,15 @@
     });
   }
 
-  selectGroup('.mode-btn', 'mode', null, function(v){
+  // Mode buttons exist on BOTH the title screen and the settings screen —
+  // setMode() keeps every '.mode-btn' (regardless of which screen it's on)
+  // in sync, since selectGroup() alone would only highlight the one that
+  // was actually clicked.
+  function setMode(v){
     settings.mode = v;
+    document.querySelectorAll('.mode-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.mode === v);
+    });
     var diffGroup = document.getElementById('diffGroup');
     diffGroup.style.opacity = v==='cpu' ? '1' : '0.3';
     diffGroup.style.pointerEvents = v==='cpu' ? 'auto' : 'none';
@@ -1512,12 +1629,31 @@
       el.style.pointerEvents = v==='2p' ? 'auto' : 'none';
     });
     if (v === 'cpu') resetGoalSizeUI();
+    // the settings screen no longer has its own mode toggle (mode is chosen
+    // on the title screen) — show a small label instead so it's clear which
+    // mode is active without having to go back
+    var label = document.getElementById('settingsModeLabel');
+    if (label) label.textContent = 'モード：' + (v === 'cpu' ? 'CPU対戦' : '2人対戦');
+  }
+  document.querySelectorAll('.mode-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      sndClick(); ensureAudio();
+      setMode(b.dataset.mode);
+    });
+  });
+  // The title screen's mode buttons additionally navigate straight into
+  // the detailed settings screen once a mode is chosen.
+  document.getElementById('titleModeCpu').addEventListener('click', function(){ show('settings'); });
+  document.getElementById('titleMode2p').addEventListener('click', function(){ show('settings'); });
+  document.getElementById('backToTitleBtn').addEventListener('click', function(){
+    sndClick(); show('title');
   });
   selectGroup('.diff-btn', 'diff', null, function(v){ settings.difficulty = v; });
   selectGroup('.goalL-btn', 'goal', null, function(v){ settings.goalSizeLeft = v; });
   selectGroup('.goalR-btn', 'goal', null, function(v){ settings.goalSizeRight = v; });
   selectGroup('.malletL-btn', 'mallet', null, function(v){ settings.malletSizeLeft = v; });
   selectGroup('.malletR-btn', 'mallet', null, function(v){ settings.malletSizeRight = v; });
+  selectGroup('.freq-btn', 'freq', null, function(v){ settings.itemFrequency = v; });
   selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
   selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
 
@@ -1528,12 +1664,30 @@
      address bar permanently, but the Fullscreen API — where
      supported — hides it while this page is in the foreground.
   --------------------------------------------------------- */
+  // Rough phone-vs-tablet heuristic: phones' short side is well under
+  // ~600px in CSS pixels; iPads (and larger tablets) are comfortably above
+  // it. Re-evaluated on demand since orientation changes which of
+  // innerWidth/innerHeight is the "short" one.
+  function isPhoneSize(){
+    return Math.min(window.innerWidth, window.innerHeight) < 600;
+  }
+
   function tryFullscreen(){
     var el = document.documentElement;
-    if (document.fullscreenElement || document.webkitFullscreenElement) return;
-    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
-    if (req){
-      try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
+    if (!(document.fullscreenElement || document.webkitFullscreenElement)){
+      var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+      if (req){
+        try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
+      }
+    }
+    // Best-effort native portrait lock for browsers that support it
+    // (mainly Android Chrome, and only while fullscreen). iOS Safari has no
+    // equivalent API — the CSS rotate fallback above covers it instead.
+    if (isPhoneSize() && screen.orientation && screen.orientation.lock){
+      try{
+        var lockResult = screen.orientation.lock('portrait');
+        if (lockResult && lockResult.catch) lockResult.catch(function(){ /* not supported here — CSS fallback still applies */ });
+      }catch(e){ /* ignore */ }
     }
   }
   function exitFullscreen(){
@@ -1626,7 +1780,8 @@
   document.getElementById('quitBtn').addEventListener('click', function(){
     state = STATE_MENU;
     touchMap = {};
-    show('menu');
+    lastTouchClientPos.left = null; lastTouchClientPos.right = null;
+    show('settings');
   });
   document.getElementById('rematchBtn').addEventListener('click', function(){
     startGame();
@@ -1634,7 +1789,8 @@
   document.getElementById('menuBtn').addEventListener('click', function(){
     state = STATE_MENU;
     touchMap = {};
-    show('menu');
+    lastTouchClientPos.left = null; lastTouchClientPos.right = null;
+    show('settings');
   });
 
   // prevent iOS bounce/scroll everywhere
@@ -1652,6 +1808,7 @@
   });
 
   // init
+  setMode(settings.mode); // populate the settings screen's mode label up front
   resize();
   render();
 })();
