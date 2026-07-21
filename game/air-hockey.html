@@ -25,25 +25,11 @@
   #stage{ position:fixed; inset:0; }
   canvas{ position:absolute; inset:0; display:block; width:100%; height:100%; }
 
-  /* Phone portrait lock: iOS Safari has no working orientation-lock API, so
-     this is the standard CSS-only fallback — when a small (phone-sized)
-     screen reports landscape, rotate the whole page -90deg so it always
-     RENDERS portrait regardless of how the phone is physically held.
-     max-height (not max-width) is used because in landscape the viewport's
-     height equals the device's short side — phones are well under 500px
-     there, while iPads stay well above it, so this never touches iPad. */
-  @media screen and (orientation: landscape) and (max-height: 520px){
-    html{
-      transform: rotate(-90deg);
-      transform-origin: left top;
-      width: 100vh;
-      height: 100vw;
-      overflow: hidden;
-      position: fixed;
-      top: 100%;
-      left: 0;
-    }
-  }
+  /* Note: phones don't need a forced-portrait CSS/JS orientation lock here.
+     The game itself adapts its split axis to whichever way the phone is
+     actually being held (see useRotatedLayout in the script): portrait ->
+     top/bottom split, landscape -> the normal iPad-style left/right split.
+     No rotation fighting the user's physical orientation is needed. */
 
   .glow-text{
     color:#fff;
@@ -442,6 +428,16 @@
   var canvas = document.getElementById('game');
   var ctx = canvas.getContext('2d');
   var W = 0, H = 0, DPR = 1;
+  // The simulation (field/puck/mallets/goals/CPU) is always built as a
+  // left-vs-right landscape table internally — VW/VH are its "virtual"
+  // canvas size. On a phone held in portrait, we keep simulating in that
+  // same landscape space (VW/VH swapped from the real W/H) and just render
+  // + read touches through a 90° rotation, so the visual result is a
+  // top-vs-bottom split without touching any of the left/right game logic.
+  // On anything else (iPad, or a phone turned sideways), VW/VH === W/H and
+  // nothing about the existing behavior changes.
+  var VW = 0, VH = 0;
+  var useRotatedLayout = false;
 
   function resize(){
     DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -450,6 +446,9 @@
     canvas.width = Math.floor(W * DPR);
     canvas.height = Math.floor(H * DPR);
     ctx.setTransform(DPR,0,0,DPR,0,0);
+    useRotatedLayout = isPhoneSize() && (W < H);
+    VW = useRotatedLayout ? H : W;
+    VH = useRotatedLayout ? W : H;
     layoutField();
   }
   window.addEventListener('resize', resize);
@@ -460,11 +459,11 @@
   --------------------------------------------------------- */
   var field = {};
   function layoutField(){
-    var margin = Math.min(W,H) * 0.03;
+    var margin = Math.min(VW,VH) * 0.03;
     field.left = margin;
-    field.right = W - margin;
+    field.right = VW - margin;
     field.top = margin + 10;
-    field.bottom = H - margin;
+    field.bottom = VH - margin;
     field.midX = (field.left + field.right) / 2;
     field.w = field.right - field.left;
     field.h = field.bottom - field.top;
@@ -491,6 +490,19 @@
     mallet.left.r = mallet.left.baseR;
     mallet.right.r = mallet.right.baseR;
     puck.r = scale * 0.03;
+
+    // Keep every speed/distance figure proportional to how big the table
+    // actually is on THIS screen, so a phone's smaller field doesn't make
+    // the puck/CPU/items feel faster or more precise than on an iPad.
+    speedScale = scale / REF_SCALE;
+    puck.baseMinSpeed = PUCK_BASE_MIN_SPEED_REF * speedScale;
+    puck.maxMinSpeed = PUCK_MAX_MIN_SPEED_REF * speedScale;
+    puck.maxSpeed = PUCK_MAX_SPEED_REF * speedScale;
+    ITEM_SPEED_BOOST = ITEM_SPEED_BOOST_REF * speedScale;
+    ITEM_DRIFT_SPEED_MIN = ITEM_DRIFT_SPEED_MIN_REF * speedScale;
+    ITEM_DRIFT_SPEED_MAX = ITEM_DRIFT_SPEED_MAX_REF * speedScale;
+    STUCK_MOVE_THRESHOLD = STUCK_MOVE_THRESHOLD_REF * speedScale;
+    updateDifficultyScaling();
 
     updateMalletBounds();
   }
@@ -544,11 +556,38 @@
     return (key && key !== 'none' && ICON_IMAGES[key]) ? ICON_IMAGES[key] : null;
   }
 
-  var DIFF = {
+  // All speed/distance figures below (maxSpeed, error, drift, etc.) were
+  // tuned against an iPad-landscape field, which has a field "scale"
+  // (Math.min(field.w,field.h) — see layoutField) of roughly 760px. On a
+  // much smaller screen (a phone), those same absolute px/frame values
+  // would cover a far bigger fraction of the smaller table every frame, so
+  // the puck reads as noticeably faster even though nothing about the
+  // physics actually changed. speedScale (recomputed in layoutField on
+  // every resize) corrects for this: everything below has a fixed "_REF"
+  // reference value tuned for REF_SCALE, and a live value actually used by
+  // the game that's kept in proportion to the CURRENT screen's field scale.
+  var REF_SCALE = 760;
+  var speedScale = 1;
+
+  var DIFF_REF = {
     easy:   { maxSpeed: 4.2,  reaction: 0.30, error: 46, aggressiveness: 0.45 },
     normal: { maxSpeed: 7.2,  reaction: 0.14, error: 20, aggressiveness: 0.65 },
     hard:   { maxSpeed: 16.5, reaction: 0.02, error: 3,  aggressiveness: 0.95 }
   };
+  // live copy, kept scaled — updateDifficultyScaling() refreshes maxSpeed/error each layoutField()
+  var DIFF = {
+    easy:   { maxSpeed: DIFF_REF.easy.maxSpeed,   reaction: DIFF_REF.easy.reaction,   error: DIFF_REF.easy.error,   aggressiveness: DIFF_REF.easy.aggressiveness },
+    normal: { maxSpeed: DIFF_REF.normal.maxSpeed, reaction: DIFF_REF.normal.reaction, error: DIFF_REF.normal.error, aggressiveness: DIFF_REF.normal.aggressiveness },
+    hard:   { maxSpeed: DIFF_REF.hard.maxSpeed,   reaction: DIFF_REF.hard.reaction,   error: DIFF_REF.hard.error,   aggressiveness: DIFF_REF.hard.aggressiveness }
+  };
+  function updateDifficultyScaling(){
+    Object.keys(DIFF_REF).forEach(function(k){
+      DIFF[k].maxSpeed = DIFF_REF[k].maxSpeed * speedScale;
+      DIFF[k].error = DIFF_REF[k].error * speedScale;
+      // reaction (seconds) and aggressiveness (a ratio) are not distance
+      // values, so they don't need to scale with screen size.
+    });
+  }
 
   var GOAL_SIZE = { small: 0.7, normal: 1.0, large: 1.35 };
   var MALLET_SIZE = { small: 0.75, normal: 1.0, large: 1.3 };
@@ -562,7 +601,8 @@
   };
   var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
   var ITEM_LIFETIME_MS = 13500;  // an uncollected item disappears after this long (1.5x)
-  var ITEM_SPEED_BOOST = 44;     // px/frame-unit — well above the normal max speed (+30%)
+  var ITEM_SPEED_BOOST_REF = 44; // px/frame-unit — well above the normal max speed (+30%), at REF_SCALE
+  var ITEM_SPEED_BOOST = ITEM_SPEED_BOOST_REF; // live, scaled value — see updateDifficultyScaling()/layoutField()
   var ITEM_SPEED_BUFF_MS = 6000; // 'speed' item: powers up the mallet itself for this long —
                                   // every hit landed during this window is a super-speed shot
   var ITEM_CURVE_BUFF_MS = 6000; // 'curve' item: powers up the mallet itself for this long —
@@ -577,8 +617,10 @@
   var ITEM_GHOST_FLASH_MS = 220;          // how long that contact flash lasts
   var ITEM_GIANT_BUFF_MS = 9000; // 'giant' item: mallet stays enlarged for this long
   var ITEM_GIANT_MULT = 1.75;    // how much bigger the mallet gets while buffed
-  var ITEM_DRIFT_SPEED_MIN = 16; // px/sec — items float slowly around the court
-  var ITEM_DRIFT_SPEED_MAX = 30;
+  var ITEM_DRIFT_SPEED_MIN_REF = 16; // px/sec at REF_SCALE — items float slowly around the court
+  var ITEM_DRIFT_SPEED_MAX_REF = 30;
+  var ITEM_DRIFT_SPEED_MIN = ITEM_DRIFT_SPEED_MIN_REF; // live, scaled — see layoutField()
+  var ITEM_DRIFT_SPEED_MAX = ITEM_DRIFT_SPEED_MAX_REF;
 
   // spawn-interval multiplier per itemFrequency setting — applied on top of
   // the baseline (1.2x) intervals below. 'off' is handled separately (no
@@ -608,10 +650,16 @@
   // was reset to. See resyncHeldTouches().
   var lastTouchClientPos = { left: null, right: null };
 
+  // reference (REF_SCALE-tuned) puck speed figures; live values below are
+  // kept proportional to the current screen via speedScale (layoutField())
+  var PUCK_BASE_MIN_SPEED_REF = 2.8; // base serve speed trimmed a bit — hits now build speed up over a rally instead
+  var PUCK_MAX_MIN_SPEED_REF = 13;
+  var PUCK_MAX_SPEED_REF = 27;
+
   var puck = {
     x:0, y:0, vx:0, vy:0, r:20,
-    minSpeed: 2.8, baseMinSpeed: 2.8, maxMinSpeed: 13, // base serve speed trimmed a bit — hits now build speed up over a rally instead
-    maxSpeed: 27,
+    minSpeed: PUCK_BASE_MIN_SPEED_REF, baseMinSpeed: PUCK_BASE_MIN_SPEED_REF, maxMinSpeed: PUCK_MAX_MIN_SPEED_REF,
+    maxSpeed: PUCK_MAX_SPEED_REF,
     rallyTime: 0,
     rallyHits: 0,
     curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, // 'curve' item state
@@ -623,7 +671,8 @@
   // corner) — if so, it gets a firm shove back toward the center.
   var stuckWatch = { x:0, y:0, timer:0 };
   var STUCK_TIMEOUT_S = 1.4;      // how long with near-zero movement before we intervene
-  var STUCK_MOVE_THRESHOLD = 26;  // px — movement below this over the timeout counts as "stuck"
+  var STUCK_MOVE_THRESHOLD_REF = 26; // px at REF_SCALE — movement below this over the timeout counts as "stuck"
+  var STUCK_MOVE_THRESHOLD = STUCK_MOVE_THRESHOLD_REF; // live, scaled — see layoutField()
 
   var cpu = {
     targetY: 0,
@@ -900,6 +949,16 @@
     };
   }
 
+  // Converts a physical, canvas-relative touch/mouse point into the
+  // simulation's "virtual" (always left/right landscape) coordinate space —
+  // the exact inverse of the rotation render() applies when
+  // useRotatedLayout is on. A no-op when it's off (iPad, or a phone held
+  // sideways).
+  function toVirtualXY(x, y){
+    if (!useRotatedLayout) return { x: x, y: y };
+    return { x: y, y: W - x };
+  }
+
   function assignTouch(id, x){
     if (settings.mode === 'cpu'){
       return 'left'; // human always controls left mallet
@@ -914,7 +973,8 @@
     var rect = canvas.getBoundingClientRect();
     for (var i=0;i<e.changedTouches.length;i++){
       var t = e.changedTouches[i];
-      var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      var raw = toVirtualXY(t.clientX - rect.left, t.clientY - rect.top);
+      var x = raw.x, y = raw.y;
       var side = assignTouch(t.identifier, x);
       if (side === 'right' && settings.mode === 'cpu') continue;
       if (touchMap[side] !== undefined) continue; // side already controlled by another finger
@@ -939,7 +999,8 @@
       var side = null;
       for (var k in touchMap){ if (touchMap[k]===t.identifier) side = k; }
       if (!side) continue;
-      var x = t.clientX - rect.left, y = t.clientY - rect.top;
+      var raw = toVirtualXY(t.clientX - rect.left, t.clientY - rect.top);
+      var x = raw.x, y = raw.y;
       lastTouchClientPos[side] = { x: x, y: y };
       if (state !== STATE_PLAY) continue;
       var b = side==='left' ? field.leftBounds : field.rightBounds;
@@ -987,15 +1048,16 @@
   canvas.addEventListener('mousedown', function(e){
     if (state !== STATE_PLAY) return;
     var rect = canvas.getBoundingClientRect();
-    var x = e.clientX-rect.left, y = e.clientY-rect.top;
-    mouseSide = assignTouch(0, x);
+    var raw = toVirtualXY(e.clientX-rect.left, e.clientY-rect.top);
+    mouseSide = assignTouch(0, raw.x);
     if (mouseSide==='right' && settings.mode==='cpu'){ mouseSide=null; return; }
     mallet[mouseSide].active = true;
   });
   canvas.addEventListener('mousemove', function(e){
     if (!mouseSide || state !== STATE_PLAY) return;
     var rect = canvas.getBoundingClientRect();
-    var x = e.clientX-rect.left, y = e.clientY-rect.top;
+    var raw = toVirtualXY(e.clientX-rect.left, e.clientY-rect.top);
+    var x = raw.x, y = raw.y;
     var b = mouseSide==='left'?field.leftBounds:field.rightBounds;
     var p = clampTo(b,x,y);
     var m = mallet[mouseSide];
@@ -1333,8 +1395,6 @@
      RENDER
   --------------------------------------------------------- */
   function drawField(){
-    ctx.clearRect(0,0,W,H);
-
     // outer glow border
     ctx.save();
     ctx.strokeStyle = 'rgba(0,246,255,0.9)';
@@ -1557,15 +1617,33 @@
   }
 
   function render(){
+    // Clear the whole physical canvas BEFORE any rotation transform below —
+    // clearRect always clears in the current coordinate space, so doing it
+    // pre-rotation guarantees the full real screen gets wiped regardless of
+    // whether the phone top/bottom rotation is active this frame.
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    if (useRotatedLayout){
+      // Rotate the whole scene 90° so the simulation's native left/right
+      // split (everything below still thinks in those terms) renders as a
+      // top/bottom split on a phone's portrait screen. Touch input gets the
+      // matching inverse transform — see toVirtualXY().
+      ctx.translate(W, 0);
+      ctx.rotate(Math.PI/2);
+    }
+
     drawField();
     drawItem();
-    // iPad lies flat on the table: the left-side player views the screen
-    // from the left edge, the right-side player from the right edge. Rotate
-    // each player's icon to face them — left rotates 90° clockwise, right
-    // rotates 90° counter-clockwise.
+    // Players sit facing each other across the table, so each one's icon is
+    // rotated to face them — left rotates 90° clockwise, right rotates 90°
+    // counter-clockwise. (On phones this composes with the 90° scene
+    // rotation above and still works out correctly for each side.)
     drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), Math.PI/2);
     drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), -Math.PI/2);
     drawPuck();
+
+    ctx.restore();
   }
 
   /* ---------------------------------------------------------
@@ -1674,20 +1752,10 @@
 
   function tryFullscreen(){
     var el = document.documentElement;
-    if (!(document.fullscreenElement || document.webkitFullscreenElement)){
-      var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
-      if (req){
-        try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
-      }
-    }
-    // Best-effort native portrait lock for browsers that support it
-    // (mainly Android Chrome, and only while fullscreen). iOS Safari has no
-    // equivalent API — the CSS rotate fallback above covers it instead.
-    if (isPhoneSize() && screen.orientation && screen.orientation.lock){
-      try{
-        var lockResult = screen.orientation.lock('portrait');
-        if (lockResult && lockResult.catch) lockResult.catch(function(){ /* not supported here — CSS fallback still applies */ });
-      }catch(e){ /* ignore */ }
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+    if (req){
+      try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
     }
   }
   function exitFullscreen(){
