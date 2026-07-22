@@ -68,7 +68,6 @@
   #menu .row{ gap:8px; }
   #menu button{ padding:9px 15px; font-size:13px; }
   #menu button.primary{ padding:12px 30px; font-size:16px; margin-top:2px; }
-  #menu #fsBtn{ padding:7px 14px; font-size:11px; }
 
   .title{
     font-size:clamp(28px,6vw,48px);
@@ -302,7 +301,7 @@
       <div class="group">
         <div class="player-cols">
           <div class="player-col" data-side="left">
-            <div class="player-col-title">P1（左）</div>
+            <div class="player-col-title" id="playerColTitleL">P1（左）</div>
             <button class="icon-pick-btn" id="iconPickL" type="button">
               <span class="icon-pick-thumb" id="iconPickThumbL">✕</span>
               <span class="icon-pick-label">アイコン</span>
@@ -321,7 +320,7 @@
             </div>
           </div>
           <div class="player-col" data-side="right">
-            <div class="player-col-title">P2（右）</div>
+            <div class="player-col-title" id="playerColTitleR">P2（右）</div>
             <button class="icon-pick-btn" id="iconPickR" type="button">
               <span class="icon-pick-thumb" id="iconPickThumbR">✕</span>
               <span class="icon-pick-label">アイコン</span>
@@ -371,9 +370,6 @@
       </div>
 
       <button id="startBtn" class="primary" style="margin-top:8px;">ゲーム開始</button>
-
-      <button id="fsBtn" class="ghost" style="font-size:12px; padding:8px 16px;">全画面表示にする</button>
-      <div class="group-note" style="margin-top:-14px;">Chromeでアドレスバーを消したい場合はこちら。最も確実なのはSafariで開き「ホーム画面に追加」する方法です</div>
     </div>
   </div>
 
@@ -662,9 +658,20 @@
     maxSpeed: PUCK_MAX_SPEED_REF,
     rallyTime: 0,
     rallyHits: 0,
-    curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, // 'curve' item state
-    ghostUntil: 0, ghostFlashUntil: 0 // 'ghost' item state
+    // 'curve'/'ghost' item state — ownerSide ('left'|'right') is whichever
+    // mallet's hit triggered the effect. Both effects only actually apply
+    // while the puck is on the OPPONENT's side of the court relative to
+    // ownerSide; *Until is just the outer time cap on how long that can
+    // keep happening (see isOpponentSide() and its usage below).
+    curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, curveOwnerSide: null,
+    ghostUntil: 0, ghostFlashUntil: 0, ghostOwnerSide: null
   };
+
+  // True when x (virtual court coordinate) is on the far side of the
+  // court from ownerSide — i.e. the opponent's half.
+  function isOpponentSide(ownerSide, x){
+    return ownerSide === 'left' ? x > field.midX : x < field.midX;
+  }
 
   // Watches for the puck getting wedged in a corner/against a mallet and
   // barely moving for too long (can happen especially against the CPU in a
@@ -751,8 +758,8 @@
     puck.minSpeed = puck.baseMinSpeed; // start each point at the slow serve speed
     puck.rallyTime = 0;
     puck.rallyHits = 0;
-    puck.curveUntil = 0; puck.curveDir = 0;
-    puck.ghostUntil = 0;
+    puck.curveUntil = 0; puck.curveDir = 0; puck.curveOwnerSide = null;
+    puck.ghostUntil = 0; puck.ghostOwnerSide = null;
     var dir = servingSide === 'right' ? 1 : -1;
     var ang = (Math.random()*0.6 - 0.3);
     puck.vx = Math.cos(ang) * puck.minSpeed * dir;
@@ -886,12 +893,13 @@
   // handled separately in resolveMalletCollision since they're timed mallet
   // buffs (every hit during the window triggers them), not a single pending
   // charge that's used up on the first hit.
-  function applyItemEffect(m){
+  function applyItemEffect(m, side){
     if (!m.item) return;
     var type = m.item;
     m.item = null; // used up — mallet glow reverts to normal immediately
     if (type === 'ghost'){
       puck.ghostUntil = performance.now() + ITEM_GHOST_MS;
+      puck.ghostOwnerSide = side; // only actually invisible while on the opponent's side
     }
     sndItemUse();
   }
@@ -956,7 +964,10 @@
   // sideways).
   function toVirtualXY(x, y){
     if (!useRotatedLayout) return { x: x, y: y };
-    return { x: y, y: W - x };
+    // matches the translate(0,H)+rotate(-90°) transform in render(): the
+    // simulation's "left" side (the human player in CPU mode) ends up at
+    // the physical BOTTOM of the phone, within reach of whoever is holding it.
+    return { x: H - y, y: x };
   }
 
   function assignTouch(id, x){
@@ -1158,7 +1169,7 @@
   /* ---------------------------------------------------------
      PHYSICS
   --------------------------------------------------------- */
-  function resolveMalletCollision(m){
+  function resolveMalletCollision(m, side){
     var dx = puck.x - m.x, dy = puck.y - m.y;
     var dist = Math.hypot(dx,dy);
     var minDist = puck.r + m.r;
@@ -1214,14 +1225,16 @@
         puck.curveDir = Math.random() < 0.5 ? 1 : -1;
         puck.curveStart = now;
         puck.curveSeed = Math.random() * 1000;
+        puck.curveOwnerSide = side; // only bends while on this side's opponent half
         sndItemUse();
       } else if (puck.curveUntil){
         puck.curveUntil = 0;
         puck.curveDir = 0;
+        puck.curveOwnerSide = null;
       }
 
       // a pending 'ghost' item (if any) fires once, on this hit
-      applyItemEffect(m);
+      applyItemEffect(m, side);
     }
   }
 
@@ -1234,18 +1247,22 @@
     if (puck.curveUntil){
       var now = performance.now();
       if (now < puck.curveUntil){
-        var curSpd = Math.hypot(puck.vx, puck.vy);
-        if (curSpd > 0.01){
-          var elapsed = now - puck.curveStart;
-          var wobble = Math.sin(elapsed*0.006 + puck.curveSeed) * 0.75
-                     + Math.sin(elapsed*0.017 + puck.curveSeed*2.3) * 0.55;
-          var turnAmt = ITEM_CURVE_TURN_RATE * (1 + wobble);
-          var ang = Math.atan2(puck.vy, puck.vx) + puck.curveDir * turnAmt;
-          puck.vx = Math.cos(ang) * curSpd;
-          puck.vy = Math.sin(ang) * curSpd;
+        // only actually bends while the puck is on the opponent's half —
+        // crossing back to the activating player's own side flies straight
+        if (isOpponentSide(puck.curveOwnerSide, puck.x)){
+          var curSpd = Math.hypot(puck.vx, puck.vy);
+          if (curSpd > 0.01){
+            var elapsed = now - puck.curveStart;
+            var wobble = Math.sin(elapsed*0.006 + puck.curveSeed) * 0.75
+                       + Math.sin(elapsed*0.017 + puck.curveSeed*2.3) * 0.55;
+            var turnAmt = ITEM_CURVE_TURN_RATE * (1 + wobble);
+            var ang = Math.atan2(puck.vy, puck.vx) + puck.curveDir * turnAmt;
+            puck.vx = Math.cos(ang) * curSpd;
+            puck.vy = Math.sin(ang) * curSpd;
+          }
         }
       } else {
-        puck.curveUntil = 0; puck.curveDir = 0;
+        puck.curveUntil = 0; puck.curveDir = 0; puck.curveOwnerSide = null;
       }
     }
 
@@ -1297,8 +1314,8 @@
       }
     }
 
-    resolveMalletCollision(mallet.left);
-    resolveMalletCollision(mallet.right);
+    resolveMalletCollision(mallet.left, 'left');
+    resolveMalletCollision(mallet.right, 'right');
 
     // gradually raise min speed as the rally goes on — mostly driven by how
     // many times the puck has been hit, with a slow time-based nudge too so
@@ -1588,7 +1605,9 @@
 
   function drawPuck(){
     var now = performance.now();
-    var ghosted = puck.ghostUntil && now < puck.ghostUntil;
+    // only actually hides while the puck is on the opponent's half —
+    // crossing back to the activating player's own side reveals it
+    var ghosted = puck.ghostUntil && now < puck.ghostUntil && isOpponentSide(puck.ghostOwnerSide, puck.x);
     ctx.save();
     if (ghosted){
       // 'ghost' item effect: the puck stays nearly invisible (a dark color,
@@ -1625,12 +1644,14 @@
 
     ctx.save();
     if (useRotatedLayout){
-      // Rotate the whole scene 90° so the simulation's native left/right
-      // split (everything below still thinks in those terms) renders as a
-      // top/bottom split on a phone's portrait screen. Touch input gets the
-      // matching inverse transform — see toVirtualXY().
-      ctx.translate(W, 0);
-      ctx.rotate(Math.PI/2);
+      // Rotate the whole scene so the simulation's native left/right split
+      // (everything below still thinks in those terms) renders as a
+      // top/bottom split on a phone's portrait screen — with the "left"
+      // side (the human player in CPU mode) landing at the physical BOTTOM
+      // of the screen, within thumb's reach. Touch input gets the matching
+      // inverse transform — see toVirtualXY().
+      ctx.translate(0, H);
+      ctx.rotate(-Math.PI/2);
     }
 
     drawField();
@@ -1694,6 +1715,16 @@
   // setMode() keeps every '.mode-btn' (regardless of which screen it's on)
   // in sync, since selectGroup() alone would only highlight the one that
   // was actually clicked.
+  // How each side should be labeled in the settings UI — in CPU mode the
+  // right mallet isn't a second human, so it's clearer to call the sides
+  // "あなた"(you)/"CPU" instead of "左"/"右".
+  function playerLabel(side){
+    if (settings.mode === 'cpu'){
+      return side === 'left' ? 'P1（あなた）' : 'P2（CPU）';
+    }
+    return side === 'left' ? 'P1（左）' : 'P2（右）';
+  }
+
   function setMode(v){
     settings.mode = v;
     document.querySelectorAll('.mode-btn').forEach(function(b){
@@ -1712,6 +1743,11 @@
     // mode is active without having to go back
     var label = document.getElementById('settingsModeLabel');
     if (label) label.textContent = 'モード：' + (v === 'cpu' ? 'CPU対戦' : '2人対戦');
+    // refresh the P1/P2 column headings (P1(あなた)/P2(CPU) vs P1(左)/P2(右))
+    var titleL = document.getElementById('playerColTitleL');
+    var titleR = document.getElementById('playerColTitleR');
+    if (titleL) titleL.textContent = playerLabel('left');
+    if (titleR) titleR.textContent = playerLabel('right');
   }
   document.querySelectorAll('.mode-btn').forEach(function(b){
     b.addEventListener('click', function(){
@@ -1758,21 +1794,6 @@
       try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
     }
   }
-  function exitFullscreen(){
-    var exit = document.exitFullscreen || document.webkitExitFullscreen;
-    if (exit && (document.fullscreenElement || document.webkitFullscreenElement)){
-      try{ exit.call(document); }catch(e){}
-    }
-  }
-  document.getElementById('fsBtn').addEventListener('click', function(){
-    sndClick(); ensureAudio();
-    if (document.fullscreenElement || document.webkitFullscreenElement){
-      exitFullscreen();
-    } else {
-      tryFullscreen();
-    }
-  });
-
   /* ---------------------------------------------------------
      ICON PICKER (popup)
   --------------------------------------------------------- */
@@ -1791,7 +1812,7 @@
   function openIconPicker(side){
     iconPickSide = side;
     document.getElementById('iconPickerTitle').textContent =
-      (side === 'left' ? 'P1(左)' : 'P2(右)') + 'のアイコンを選択';
+      playerLabel(side) + 'のアイコンを選択';
     var current = side === 'left' ? settings.iconLeft : settings.iconRight;
     document.querySelectorAll('.icon-choice-btn').forEach(function(b){
       b.classList.toggle('selected', b.dataset.icon === current);
