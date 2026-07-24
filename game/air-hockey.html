@@ -341,7 +341,6 @@
   <div id="titleScreen" class="overlay">
     <div class="panel">
       <div class="title title-huge">NEON<br>AIR HOCKEY</div>
-      <div class="subtitle">iPadを横向きにして、2本指(またはお2人)でどうぞ</div>
       <div class="row" style="margin-top:18px;">
         <button id="titleModeCpu" class="mode-btn primary title-mode-btn selected" data-mode="cpu">CPU対戦</button>
         <button id="titleMode2p" class="mode-btn primary title-mode-btn" data-mode="2p">2人対戦</button>
@@ -517,14 +516,10 @@
     layoutField();
   }
 
-  // Phone portrait uses a shorter English label (fits the tighter left-side
-  // slot it's nudged into better); tablet/landscape keeps the Japanese one.
   function updateTargetInfoText(){
     var el = document.getElementById('targetInfo');
     if (!el) return;
-    el.textContent = useRotatedLayout
-      ? (settings.target + '-point to win')
-      : (settings.target + '点先取');
+    el.textContent = settings.target + '-point to win';
   }
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function(){ setTimeout(resize, 250); });
