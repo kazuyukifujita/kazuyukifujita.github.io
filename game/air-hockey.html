@@ -1,0 +1,1906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Air Hockey">
+<title>Neon Air Hockey</title>
+<style>
+  :root{
+    --neon-cyan:#00f6ff;
+    --neon-magenta:#ff2bd6;
+    --neon-yellow:#ffe100;
+    --bg:#050414;
+  }
+  *{ box-sizing:border-box; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  html,body{
+    margin:0; padding:0; width:100%; height:100%;
+    background:var(--bg); overflow:hidden;
+    font-family:-apple-system, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+    touch-action:none;
+  }
+  #stage{ position:fixed; inset:0; }
+  canvas{ position:absolute; inset:0; display:block; width:100%; height:100%; }
+
+  /* Note: phones don't need a forced-portrait CSS/JS orientation lock here.
+     The game itself adapts its split axis to whichever way the phone is
+     actually being held (see useRotatedLayout in the script): portrait ->
+     top/bottom split, landscape -> the normal iPad-style left/right split.
+     No rotation fighting the user's physical orientation is needed. */
+
+  .glow-text{
+    color:#fff;
+    text-shadow:0 0 6px var(--neon-cyan), 0 0 16px var(--neon-cyan), 0 0 2px #fff;
+    letter-spacing:2px;
+  }
+
+  .overlay{
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(2,2,16,0.86);
+    z-index:10;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  #iconPickerOverlay{ z-index:20; }
+  .hidden{ display:none !important; }
+
+  .panel{
+    display:flex; flex-direction:column; align-items:center; gap:22px;
+    max-width:640px; width:90%;
+    padding:28px;
+    margin:auto; /* keeps panel centered when it fits, but lets it scroll into view when it doesn't */
+  }
+
+  /* Main menu has many groups — use a tighter, scrollable layout so the
+     start button is always reachable even on shorter iPad viewports. */
+  #menu{ align-items:flex-start; }
+  #menu .panel{
+    gap:12px;
+    padding:calc(14px + env(safe-area-inset-top)) 22px calc(18px + env(safe-area-inset-bottom));
+  }
+  #menu .title{ font-size:clamp(22px,5vw,34px); margin-bottom:0; }
+  #menu .subtitle{ margin-top:-4px; }
+  #menu .group{ gap:6px; }
+  #menu .row{ gap:8px; }
+  #menu button{ padding:9px 15px; font-size:13px; }
+  #menu button.primary{ padding:12px 30px; font-size:16px; margin-top:2px; }
+
+  .title{
+    font-size:clamp(28px,6vw,48px);
+    font-weight:800; margin:0 0 6px 0; text-align:center;
+    color:#fff;
+    text-shadow:0 0 8px var(--neon-magenta), 0 0 22px var(--neon-magenta), 0 0 2px #fff;
+  }
+  .subtitle{
+    font-size:clamp(12px,2.4vw,16px);
+    color:#8fe8ff; opacity:0.85; margin-top:-10px; text-align:center;
+  }
+
+  /* Title screen: big logo + just the mode choice */
+  .title-huge{
+    font-size:clamp(48px,11vw,96px);
+    line-height:1.05;
+    margin-bottom:14px;
+  }
+  .title-mode-btn{
+    padding:22px 40px; font-size:19px; min-width:180px;
+  }
+
+  .group{
+    width:100%;
+    display:flex; flex-direction:column; gap:10px; align-items:center;
+  }
+  .group-label{
+    font-size:13px; color:var(--neon-cyan); letter-spacing:3px; text-transform:uppercase;
+    opacity:0.85;
+  }
+  .group-note{
+    font-size:11px; color:#9fd; opacity:0.6; margin-top:-6px; text-align:center;
+  }
+  .row{ display:flex; gap:12px; flex-wrap:wrap; justify-content:center; width:100%; align-items:center; }
+  .row-tag{
+    font-size:12px; color:#8fe8ff; opacity:0.85; min-width:52px; text-align:right;
+  }
+
+  /* Two-column per-player settings: P1(left) settings sit on the left half
+     of the menu, P2(right) settings on the right half — mirroring their
+     actual sides of the table. */
+  .player-cols{
+    display:flex; width:100%; gap:18px; justify-content:center;
+  }
+  .player-col{
+    flex:1 1 0; min-width:0;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    padding:10px 8px; border-radius:12px;
+    background:rgba(255,255,255,0.03);
+  }
+  .player-col[data-side="left"]{ border:1px solid rgba(0,246,255,0.35); }
+  .player-col[data-side="right"]{ border:1px solid rgba(255,43,214,0.35); }
+  .player-col-title{
+    font-size:12px; letter-spacing:2px; opacity:0.85; margin-bottom:2px;
+  }
+  .player-col[data-side="left"] .player-col-title{ color:var(--neon-cyan); }
+  .player-col[data-side="right"] .player-col-title{ color:var(--neon-magenta); }
+  .mini-label{
+    font-size:10px; color:#9fe8ff; opacity:0.7; letter-spacing:1px; margin-top:2px;
+  }
+  .mini-row{ gap:6px; }
+  .mini-row button{ padding:7px 11px; font-size:12px; }
+  .goal-block{ opacity:0.3; pointer-events:none; } /* dimmed by default (CPU mode); enabled in 2P mode */
+
+  .icon-pick-btn{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:transparent; border:none; box-shadow:none; padding:6px;
+  }
+  .icon-pick-thumb{
+    width:64px; height:64px; border-radius:50%; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    background:#0c0c1a; border:2px solid rgba(255,255,255,0.35);
+    font-size:20px; color:#889;
+  }
+  .icon-pick-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .icon-pick-label{ font-size:12px; color:#8fe8ff; opacity:0.9; }
+
+  .icon-choice-btn{
+    width:76px; height:76px; padding:0; border-radius:50%;
+    overflow:hidden; background:#0c0c1a;
+    border:2px solid rgba(255,255,255,0.3);
+    box-shadow:none;
+  }
+  .icon-choice-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .icon-choice-btn.selected{
+    border-color:#fff;
+    box-shadow:0 0 10px rgba(255,255,255,0.7), 0 0 18px rgba(255,255,255,0.4);
+  }
+  .icon-choice-btn.none-btn{
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; color:#889;
+  }
+
+  button{
+    font-family:inherit; cursor:pointer;
+    border-radius:14px;
+    padding:14px 22px;
+    font-size:15px; font-weight:700;
+    color:#eafcff;
+    background:rgba(0,246,255,0.06);
+    border:1.5px solid rgba(0,246,255,0.55);
+    box-shadow:0 0 10px rgba(0,246,255,0.25) inset, 0 0 14px rgba(0,246,255,0.18);
+    transition:transform .08s ease, background .15s ease, box-shadow .15s ease;
+    -webkit-tap-highlight-color:transparent;
+  }
+  button:active{ transform:scale(0.95); }
+  button.selected{
+    background:rgba(0,246,255,0.22);
+    box-shadow:0 0 14px rgba(0,246,255,0.55) inset, 0 0 26px rgba(0,246,255,0.5);
+    border-color:#fff;
+  }
+  button.primary{
+    background:rgba(255,43,214,0.12);
+    border-color:rgba(255,43,214,0.7);
+    box-shadow:0 0 14px rgba(255,43,214,0.3) inset, 0 0 18px rgba(255,43,214,0.25);
+    padding:16px 36px; font-size:17px;
+  }
+  button.primary.selected{
+    background:rgba(255,43,214,0.28);
+    box-shadow:0 0 16px rgba(255,43,214,0.6) inset, 0 0 30px rgba(255,43,214,0.55);
+  }
+  button.ghost{
+    background:transparent; border-color:rgba(255,255,255,0.35); color:#cfeaff;
+    box-shadow:none;
+  }
+  button:disabled{ opacity:0.3; pointer-events:none; }
+
+  #hud{
+    position:absolute; top:0; left:0; right:0;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:calc(10px + env(safe-area-inset-top)) 18px 0 18px;
+    z-index:5; pointer-events:none;
+  }
+  #hud > *{ pointer-events:auto; }
+  .score{
+    font-size:clamp(30px,7vw,54px); font-weight:800; min-width:60px; text-align:center;
+  }
+  .score.left{ color:#fff; text-shadow:0 0 8px var(--neon-cyan),0 0 20px var(--neon-cyan); }
+  .score.right{ color:#fff; text-shadow:0 0 8px var(--neon-magenta),0 0 20px var(--neon-magenta); }
+  .score-wrap{ display:flex; align-items:center; gap:14px; }
+  .score-tag{ font-size:11px; opacity:0.7; letter-spacing:2px; color:#9fd; text-align:center; }
+  #targetInfo{
+    align-self:center; font-size:13px; color:#9fe8ff; opacity:0.75; letter-spacing:1px;
+  }
+  #pauseBtn{
+    width:44px; height:44px; border-radius:50%; padding:0;
+    font-size:18px; display:flex; align-items:center; justify-content:center;
+  }
+
+  .end-title{ font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center; }
+
+  #goalFlash{
+    position:absolute; inset:0; z-index:8; pointer-events:none;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; transition:opacity .12s ease;
+    overflow:hidden;
+  }
+  #goalFlash.show{ opacity:1; }
+  #goalFlash .bgFlash{
+    position:absolute; inset:0;
+    animation: bgFlashAnim 0.7s ease-out forwards;
+  }
+  #goalFlash .flashText{
+    position:relative;
+    font-size:clamp(48px,13vw,130px); font-weight:900; letter-spacing:6px;
+    color:#fff;
+    animation: goalPop 1.2s ease forwards;
+  }
+  @keyframes bgFlashAnim{
+    0%{ opacity:0.5; }
+    100%{ opacity:0; }
+  }
+  @keyframes goalPop{
+    0%{ transform:scale(0.35); opacity:0; }
+    14%{ transform:scale(1.18); opacity:1; }
+    28%{ transform:scale(1); opacity:1; }
+    82%{ transform:scale(1); opacity:1; }
+    100%{ transform:scale(1.06); opacity:0; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="score-wrap">
+      <div>
+        <div class="score-tag" id="tagLeft">PLAYER 1</div>
+        <div class="score left" id="scoreLeft">0</div>
+      </div>
+    </div>
+    <div id="targetInfo"></div>
+    <div class="score-wrap">
+      <div>
+        <div class="score-tag" id="tagRight">PLAYER 2</div>
+        <div class="score right" id="scoreRight">0</div>
+      </div>
+      <button id="pauseBtn" class="ghost">⏸</button>
+    </div>
+  </div>
+
+  <!-- TITLE SCREEN -->
+  <div id="titleScreen" class="overlay">
+    <div class="panel">
+      <div class="title title-huge">NEON<br>AIR HOCKEY</div>
+      <div class="subtitle">iPadを横向きにして、2本指(またはお2人)でどうぞ</div>
+      <div class="row" style="margin-top:18px;">
+        <button id="titleModeCpu" class="mode-btn primary title-mode-btn selected" data-mode="cpu">CPU対戦</button>
+        <button id="titleMode2p" class="mode-btn primary title-mode-btn" data-mode="2p">2人対戦</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS SCREEN -->
+  <div id="menu" class="overlay hidden">
+    <div class="panel">
+      <button id="backToTitleBtn" class="ghost" style="align-self:flex-start; font-size:12px; padding:7px 14px;">← モード選択に戻る</button>
+      <div class="title" style="font-size:clamp(22px,5vw,30px); margin-bottom:0;">NEON AIR HOCKEY</div>
+      <div class="subtitle" id="settingsModeLabel" style="margin-top:-6px;"></div>
+
+      <div class="group" id="diffGroup">
+        <div class="group-label">CPUの強さ</div>
+        <div class="row">
+          <button id="diffEasy" class="diff-btn" data-diff="easy">弱い</button>
+          <button id="diffNormal" class="diff-btn selected" data-diff="normal">普通</button>
+          <button id="diffHard" class="diff-btn" data-diff="hard">強い</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="player-cols">
+          <div class="player-col" data-side="left">
+            <div class="player-col-title" id="playerColTitleL">P1（左）</div>
+            <button class="icon-pick-btn" id="iconPickL" type="button">
+              <span class="icon-pick-thumb" id="iconPickThumbL">✕</span>
+              <span class="icon-pick-label">アイコン</span>
+            </button>
+            <div class="mini-label">マレットの大きさ</div>
+            <div class="row mini-row">
+              <button class="malletL-btn" data-mallet="small">小</button>
+              <button class="malletL-btn selected" data-mallet="normal">中</button>
+              <button class="malletL-btn" data-mallet="large">大</button>
+            </div>
+            <div class="mini-label goal-block" id="goalLabelL">ゴールの大きさ</div>
+            <div class="row mini-row goal-block" id="goalRowL">
+              <button class="goalL-btn" data-goal="small">小</button>
+              <button class="goalL-btn selected" data-goal="normal">中</button>
+              <button class="goalL-btn" data-goal="large">大</button>
+            </div>
+          </div>
+          <div class="player-col" data-side="right">
+            <div class="player-col-title" id="playerColTitleR">P2（右）</div>
+            <button class="icon-pick-btn" id="iconPickR" type="button">
+              <span class="icon-pick-thumb" id="iconPickThumbR">✕</span>
+              <span class="icon-pick-label">アイコン</span>
+            </button>
+            <div class="mini-label">マレットの大きさ</div>
+            <div class="row mini-row">
+              <button class="malletR-btn" data-mallet="small">小</button>
+              <button class="malletR-btn selected" data-mallet="normal">中</button>
+              <button class="malletR-btn" data-mallet="large">大</button>
+            </div>
+            <div class="mini-label goal-block" id="goalLabelR">ゴールの大きさ</div>
+            <div class="row mini-row goal-block" id="goalRowR">
+              <button class="goalR-btn" data-goal="small">小</button>
+              <button class="goalR-btn selected" data-goal="normal">中</button>
+              <button class="goalR-btn" data-goal="large">大</button>
+            </div>
+          </div>
+        </div>
+        <div class="group-note goal-block" id="goalNote">ゴール：小=守りやすい(有利)　大=守りにくい(不利)　※2人対戦のみ</div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">アイテムの出現頻度</div>
+        <div class="row">
+          <button class="freq-btn" data-freq="off">出現しない</button>
+          <button class="freq-btn" data-freq="low">少ない</button>
+          <button class="freq-btn selected" data-freq="mid">普通</button>
+          <button class="freq-btn" data-freq="high">多い</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">先取点数</div>
+        <div class="row">
+          <button id="score5" class="target-btn" data-target="5">5点</button>
+          <button id="score7" class="target-btn selected" data-target="7">7点</button>
+          <button id="score11" class="target-btn" data-target="11">11点</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <div class="group-label">サウンド</div>
+        <div class="row">
+          <button id="soundOn" class="sound-btn selected" data-sound="on">ON</button>
+          <button id="soundOff" class="sound-btn" data-sound="off">OFF</button>
+        </div>
+      </div>
+
+      <button id="startBtn" class="primary" style="margin-top:8px;">ゲーム開始</button>
+    </div>
+  </div>
+
+  <div id="goalFlash" class="hidden"></div>
+
+  <!-- ICON PICKER (popup over the menu) -->
+  <div id="iconPickerOverlay" class="overlay hidden">
+    <div class="panel">
+      <div class="title" style="font-size:24px;" id="iconPickerTitle">アイコンを選択</div>
+      <div class="row" style="max-width:420px;">
+        <button class="icon-choice-btn none-btn selected" data-icon="none">✕</button>
+        <button class="icon-choice-btn" data-icon="dad"><img src="icons/dad.png" alt=""></button>
+        <button class="icon-choice-btn" data-icon="girl"><img src="icons/girl.png" alt=""></button>
+        <button class="icon-choice-btn" data-icon="baby"><img src="icons/baby.png" alt=""></button>
+        <button class="icon-choice-btn" data-icon="mom"><img src="icons/mom.png" alt=""></button>
+      </div>
+      <button id="iconPickerClose" class="ghost" style="margin-top:8px;">閉じる</button>
+    </div>
+  </div>
+
+  <!-- PAUSE -->
+  <div id="pauseOverlay" class="overlay hidden">
+    <div class="panel">
+      <div class="title" style="font-size:32px;">一時停止</div>
+      <div class="row">
+        <button id="resumeBtn" class="primary">再開</button>
+        <button id="quitBtn" class="ghost">メニューに戻る</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- END -->
+  <div id="endOverlay" class="overlay hidden">
+    <div class="panel">
+      <div class="end-title glow-text" id="endTitle">PLAYER 1 WINS</div>
+      <div class="subtitle" id="endScore"></div>
+      <div class="row" style="margin-top:10px;">
+        <button id="rematchBtn" class="primary">もう一度</button>
+        <button id="menuBtn" class="ghost">メニューに戻る</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------------------------------------------------
+     CANVAS / RESIZE
+  --------------------------------------------------------- */
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var W = 0, H = 0, DPR = 1;
+  // The simulation (field/puck/mallets/goals/CPU) is always built as a
+  // left-vs-right landscape table internally — VW/VH are its "virtual"
+  // canvas size. On a phone held in portrait, we keep simulating in that
+  // same landscape space (VW/VH swapped from the real W/H) and just render
+  // + read touches through a 90° rotation, so the visual result is a
+  // top-vs-bottom split without touching any of the left/right game logic.
+  // On anything else (iPad, or a phone turned sideways), VW/VH === W/H and
+  // nothing about the existing behavior changes.
+  var VW = 0, VH = 0;
+  var useRotatedLayout = false;
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    useRotatedLayout = isPhoneSize() && (W < H);
+    VW = useRotatedLayout ? H : W;
+    VH = useRotatedLayout ? W : H;
+    layoutField();
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function(){ setTimeout(resize, 250); });
+
+  /* ---------------------------------------------------------
+     FIELD GEOMETRY
+  --------------------------------------------------------- */
+  var field = {};
+  function layoutField(){
+    var margin = Math.min(VW,VH) * 0.03;
+    field.left = margin;
+    field.right = VW - margin;
+    field.top = margin + 10;
+    field.bottom = VH - margin;
+    field.midX = (field.left + field.right) / 2;
+    field.w = field.right - field.left;
+    field.h = field.bottom - field.top;
+    var goalHeightBase = field.h * 0.34;
+    var midY = (field.top + field.bottom) / 2;
+    var glMul = GOAL_SIZE[settings.goalSizeLeft] || 1;
+    var grMul = GOAL_SIZE[settings.goalSizeRight] || 1;
+    field.goalHeightLeft = goalHeightBase * glMul;
+    field.goalHeightRight = goalHeightBase * grMul;
+    field.goalTopLeft = midY - field.goalHeightLeft/2;
+    field.goalBottomLeft = midY + field.goalHeightLeft/2;
+    field.goalTopRight = midY - field.goalHeightRight/2;
+    field.goalBottomRight = midY + field.goalHeightRight/2;
+
+    var scale = Math.min(field.w, field.h);
+    var malletBaseR = scale * 0.073;
+    var mlMul = MALLET_SIZE[settings.malletSizeLeft] || 1;
+    var mrMul = MALLET_SIZE[settings.malletSizeRight] || 1;
+    // baseR is the player's chosen size (small/normal/large); r is the
+    // actual on-screen radius, which the 'giant' item buff can inflate
+    // temporarily on top of baseR (see applyGiantSize in the ITEMS section).
+    mallet.left.baseR = malletBaseR * mlMul;
+    mallet.right.baseR = malletBaseR * mrMul;
+    mallet.left.r = mallet.left.baseR;
+    mallet.right.r = mallet.right.baseR;
+    puck.r = scale * 0.03;
+
+    // Keep every speed/distance figure proportional to how big the table
+    // actually is on THIS screen, so a phone's smaller field doesn't make
+    // the puck/CPU/items feel faster or more precise than on an iPad.
+    speedScale = scale / REF_SCALE;
+    puck.baseMinSpeed = PUCK_BASE_MIN_SPEED_REF * speedScale;
+    puck.maxMinSpeed = PUCK_MAX_MIN_SPEED_REF * speedScale;
+    puck.maxSpeed = PUCK_MAX_SPEED_REF * speedScale;
+    ITEM_SPEED_BOOST = ITEM_SPEED_BOOST_REF * speedScale;
+    ITEM_DRIFT_SPEED_MIN = ITEM_DRIFT_SPEED_MIN_REF * speedScale;
+    ITEM_DRIFT_SPEED_MAX = ITEM_DRIFT_SPEED_MAX_REF * speedScale;
+    STUCK_MOVE_THRESHOLD = STUCK_MOVE_THRESHOLD_REF * speedScale;
+    updateDifficultyScaling();
+
+    updateMalletBounds();
+  }
+
+  // Recomputes each mallet's allowed movement box from its CURRENT radius
+  // (mallet.r), which may be temporarily inflated by the 'giant' item.
+  // Called on resize and every frame while a giant buff is running.
+  function updateMalletBounds(){
+    var lMinX = field.left + mallet.left.r, lMaxX = field.midX - mallet.left.r;
+    var rMinX = field.midX + mallet.right.r, rMaxX = field.right - mallet.right.r;
+    if (lMinX > lMaxX){ var lc = (lMinX+lMaxX)/2; lMinX = lMaxX = lc; }
+    if (rMinX > rMaxX){ var rc = (rMinX+rMaxX)/2; rMinX = rMaxX = rc; }
+    field.leftBounds = {
+      minX: lMinX, maxX: lMaxX,
+      minY: field.top + mallet.left.r, maxY: field.bottom - mallet.left.r
+    };
+    field.rightBounds = {
+      minX: rMinX, maxX: rMaxX,
+      minY: field.top + mallet.right.r, maxY: field.bottom - mallet.right.r
+    };
+  }
+
+  /* ---------------------------------------------------------
+     STATE
+  --------------------------------------------------------- */
+  var STATE_MENU='menu', STATE_PLAY='play', STATE_PAUSE='pause', STATE_GOAL='goal', STATE_END='end';
+  var state = STATE_MENU;
+
+  var settings = {
+    mode: 'cpu',      // 'cpu' | '2p'
+    difficulty: 'normal',
+    target: 7,
+    sound: true,
+    goalSizeLeft: 'normal',   // 'small' | 'normal' | 'large' (2P handicap only)
+    goalSizeRight: 'normal',
+    malletSizeLeft: 'normal', // 'small' | 'normal' | 'large' — per player, any mode
+    malletSizeRight: 'normal',
+    iconLeft: 'none',   // 'none' | 'dad' | 'girl' | 'baby' | 'mom'
+    iconRight: 'none',
+    itemFrequency: 'mid' // 'off' | 'low' | 'mid' | 'high' — 'mid' is the original baseline rate
+  };
+
+  var ICON_SRC = { dad:'icons/dad.png', girl:'icons/girl.png', baby:'icons/baby.png', mom:'icons/mom.png' };
+  var ICON_IMAGES = {};
+  Object.keys(ICON_SRC).forEach(function(k){
+    var im = new Image();
+    im.src = ICON_SRC[k];
+    ICON_IMAGES[k] = im;
+  });
+  function getIconImg(key){
+    return (key && key !== 'none' && ICON_IMAGES[key]) ? ICON_IMAGES[key] : null;
+  }
+
+  // All speed/distance figures below (maxSpeed, error, drift, etc.) were
+  // tuned against an iPad-landscape field, which has a field "scale"
+  // (Math.min(field.w,field.h) — see layoutField) of roughly 760px. On a
+  // much smaller screen (a phone), those same absolute px/frame values
+  // would cover a far bigger fraction of the smaller table every frame, so
+  // the puck reads as noticeably faster even though nothing about the
+  // physics actually changed. speedScale (recomputed in layoutField on
+  // every resize) corrects for this: everything below has a fixed "_REF"
+  // reference value tuned for REF_SCALE, and a live value actually used by
+  // the game that's kept in proportion to the CURRENT screen's field scale.
+  var REF_SCALE = 760;
+  var speedScale = 1;
+
+  var DIFF_REF = {
+    easy:   { maxSpeed: 4.2,  reaction: 0.30, error: 46, aggressiveness: 0.45 },
+    normal: { maxSpeed: 7.2,  reaction: 0.14, error: 20, aggressiveness: 0.65 },
+    hard:   { maxSpeed: 16.5, reaction: 0.02, error: 3,  aggressiveness: 0.95 }
+  };
+  // live copy, kept scaled — updateDifficultyScaling() refreshes maxSpeed/error each layoutField()
+  var DIFF = {
+    easy:   { maxSpeed: DIFF_REF.easy.maxSpeed,   reaction: DIFF_REF.easy.reaction,   error: DIFF_REF.easy.error,   aggressiveness: DIFF_REF.easy.aggressiveness },
+    normal: { maxSpeed: DIFF_REF.normal.maxSpeed, reaction: DIFF_REF.normal.reaction, error: DIFF_REF.normal.error, aggressiveness: DIFF_REF.normal.aggressiveness },
+    hard:   { maxSpeed: DIFF_REF.hard.maxSpeed,   reaction: DIFF_REF.hard.reaction,   error: DIFF_REF.hard.error,   aggressiveness: DIFF_REF.hard.aggressiveness }
+  };
+  function updateDifficultyScaling(){
+    Object.keys(DIFF_REF).forEach(function(k){
+      DIFF[k].maxSpeed = DIFF_REF[k].maxSpeed * speedScale;
+      DIFF[k].error = DIFF_REF[k].error * speedScale;
+      // reaction (seconds) and aggressiveness (a ratio) are not distance
+      // values, so they don't need to scale with screen size.
+    });
+  }
+
+  var GOAL_SIZE = { small: 0.7, normal: 1.0, large: 1.35 };
+  var MALLET_SIZE = { small: 0.75, normal: 1.0, large: 1.3 };
+
+  // ITEM (power-up) definitions — each icon hints at its effect
+  var ITEM_TYPES = {
+    speed: { emoji:'⚡', color:'#ffe100' },   // lightning = super-fast return shot
+    curve: { emoji:'🌀', color:'#8b5cf6' },   // swirl = the shot bends off-line
+    ghost: { emoji:'👻', color:'#c9d6ff' },   // ghost = puck goes nearly invisible
+    giant: { emoji:'🍄', color:'#4ade80' }    // mushroom = mallet grows huge (classic power-up visual)
+  };
+  var ITEM_TYPE_KEYS = Object.keys(ITEM_TYPES);
+  var ITEM_LIFETIME_MS = 13500;  // an uncollected item disappears after this long (1.5x)
+  var ITEM_SPEED_BOOST_REF = 44; // px/frame-unit — well above the normal max speed (+30%), at REF_SCALE
+  var ITEM_SPEED_BOOST = ITEM_SPEED_BOOST_REF; // live, scaled value — see updateDifficultyScaling()/layoutField()
+  var ITEM_SPEED_BUFF_MS = 6000; // 'speed' item: powers up the mallet itself for this long —
+                                  // every hit landed during this window is a super-speed shot
+  var ITEM_CURVE_BUFF_MS = 6000; // 'curve' item: powers up the mallet itself for this long —
+                                  // every hit landed during this window is a curving shot
+  var ITEM_CURVE_MS = 5000;      // how long a single curving shot keeps bending after being hit (~5s)
+  var ITEM_CURVE_TURN_RATE = 0.024; // radians of turn per frame while curving — strong, extreme bend
+  var ITEM_GHOST_MS = 6000;      // how long the puck stays nearly invisible (~6s)
+  var ITEM_GHOST_COLOR = '#20223a';    // dark, close to the table color — barely readable at rest
+  var ITEM_GHOST_ALPHA = 0.018;        // how visible the ghosted puck stays normally — nearly nothing
+  var ITEM_GHOST_FLASH_COLOR = '#c9d6ff'; // pale ghostly glow shown briefly on contact
+  var ITEM_GHOST_FLASH_ALPHA = 0.55;      // how visible it flashes to on a wall/mallet hit
+  var ITEM_GHOST_FLASH_MS = 220;          // how long that contact flash lasts
+  var ITEM_GIANT_BUFF_MS = 9000; // 'giant' item: mallet stays enlarged for this long
+  var ITEM_GIANT_MULT = 1.75;    // how much bigger the mallet gets while buffed
+  var ITEM_DRIFT_SPEED_MIN_REF = 16; // px/sec at REF_SCALE — items float slowly around the court
+  var ITEM_DRIFT_SPEED_MAX_REF = 30;
+  var ITEM_DRIFT_SPEED_MIN = ITEM_DRIFT_SPEED_MIN_REF; // live, scaled — see layoutField()
+  var ITEM_DRIFT_SPEED_MAX = ITEM_DRIFT_SPEED_MAX_REF;
+
+  // spawn-interval multiplier per itemFrequency setting — applied on top of
+  // the baseline (1.2x) intervals below. 'off' is handled separately (no
+  // spawning at all), so it isn't in this map.
+  var ITEM_FREQ_INTERVAL_MULT = { low: 1.7, mid: 1.0, high: 0.55 };
+  function itemFreqMult(){ return ITEM_FREQ_INTERVAL_MULT[settings.itemFrequency] || 1; }
+
+  var MALLET_HIT_ACCEL = 1.05;   // puck speeds up a bit on every mallet hit
+  var WALL_BOUNCE_DECEL = 0.94;  // puck slows down a bit on every wall bounce
+
+  function randRange(a,b){ return a + Math.random()*(b-a); }
+
+  var fieldItem = null;   // { type, x, y, r, bornAt } — the item currently sitting on the table
+  var itemSpawnAt = 0;    // performance.now() timestamp of the next spawn
+
+  var score = { left:0, right:0 };
+
+  var mallet = {
+    left:  { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 },
+    right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 }
+  };
+  var touchMap = {}; // touchId -> 'left' | 'right'
+  // Last known finger position per side (in canvas coordinates), tracked
+  // continuously even while input is frozen (e.g. during a goal
+  // celebration) so a held-but-stationary finger can be re-synced the
+  // instant play resumes instead of leaving the mallet stuck wherever it
+  // was reset to. See resyncHeldTouches().
+  var lastTouchClientPos = { left: null, right: null };
+
+  // reference (REF_SCALE-tuned) puck speed figures; live values below are
+  // kept proportional to the current screen via speedScale (layoutField())
+  var PUCK_BASE_MIN_SPEED_REF = 2.8; // base serve speed trimmed a bit — hits now build speed up over a rally instead
+  var PUCK_MAX_MIN_SPEED_REF = 13;
+  var PUCK_MAX_SPEED_REF = 27;
+
+  var puck = {
+    x:0, y:0, vx:0, vy:0, r:20,
+    minSpeed: PUCK_BASE_MIN_SPEED_REF, baseMinSpeed: PUCK_BASE_MIN_SPEED_REF, maxMinSpeed: PUCK_MAX_MIN_SPEED_REF,
+    maxSpeed: PUCK_MAX_SPEED_REF,
+    rallyTime: 0,
+    rallyHits: 0,
+    // 'curve'/'ghost' item state — ownerSide ('left'|'right') is whichever
+    // mallet's hit triggered the effect. Both effects only actually apply
+    // while the puck is on the OPPONENT's side of the court relative to
+    // ownerSide; *Until is just the outer time cap on how long that can
+    // keep happening (see isOpponentSide() and its usage below).
+    curveUntil: 0, curveDir: 0, curveStart: 0, curveSeed: 0, curveOwnerSide: null,
+    ghostUntil: 0, ghostFlashUntil: 0, ghostOwnerSide: null
+  };
+
+  // True when x (virtual court coordinate) is on the far side of the
+  // court from ownerSide — i.e. the opponent's half.
+  function isOpponentSide(ownerSide, x){
+    return ownerSide === 'left' ? x > field.midX : x < field.midX;
+  }
+
+  // Watches for the puck getting wedged in a corner/against a mallet and
+  // barely moving for too long (can happen especially against the CPU in a
+  // corner) — if so, it gets a firm shove back toward the center.
+  var stuckWatch = { x:0, y:0, timer:0 };
+  var STUCK_TIMEOUT_S = 1.4;      // how long with near-zero movement before we intervene
+  var STUCK_MOVE_THRESHOLD_REF = 26; // px at REF_SCALE — movement below this over the timeout counts as "stuck"
+  var STUCK_MOVE_THRESHOLD = STUCK_MOVE_THRESHOLD_REF; // live, scaled — see layoutField()
+
+  var cpu = {
+    targetY: 0,
+    lastDecision: 0,
+    mode: 'defend' // 'defend' | 'attack'
+  };
+
+  /* ---------------------------------------------------------
+     AUDIO
+  --------------------------------------------------------- */
+  var actx = null;
+  var audioUnlocked = false;
+
+  function unlockAudio(){
+    // iOS Safari keeps a freshly-created AudioContext (and any context that has
+    // been backgrounded) suspended until a real user gesture explicitly plays
+    // something through it. A 1-sample silent buffer is the standard trick.
+    if (!actx) return;
+    try{
+      var buffer = actx.createBuffer(1, 1, 22050);
+      var src = actx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(actx.destination);
+      if (src.start) src.start(0); else src.noteOn(0);
+    }catch(e){ /* ignore */ }
+    audioUnlocked = true;
+  }
+
+  function ensureAudio(){
+    if (!settings.sound) return;
+    if (!actx){
+      try{ actx = new (window.AudioContext || window.webkitAudioContext)(); }catch(e){ actx=null; }
+    }
+    if (!actx) return;
+    if (actx.state === 'suspended'){
+      actx.resume();
+    }
+    if (!audioUnlocked){
+      unlockAudio();
+    }
+  }
+  function blip(freq, dur, type, vol){
+    if (!settings.sound || !actx) return;
+    if (actx.state === 'suspended'){ actx.resume(); }
+    var t0 = actx.currentTime;
+    var osc = actx.createOscillator();
+    var gain = actx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40,freq*0.6), t0+dur);
+    gain.gain.setValueAtTime((vol!==undefined?vol:0.18), t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.connect(gain); gain.connect(actx.destination);
+    osc.start(t0); osc.stop(t0+dur);
+  }
+  function sndWall(){ blip(320,0.08,'triangle',0.12); }
+  function sndHit(spd){ blip(180+Math.min(spd,20)*20,0.09,'square',0.16); }
+  function sndGoal(){ blip(660,0.35,'sawtooth',0.22); setTimeout(function(){blip(880,0.3,'sawtooth',0.18);},90); }
+  function sndClick(){ blip(500,0.05,'sine',0.1); }
+  function sndItemGet(){ blip(700,0.1,'sine',0.16); setTimeout(function(){blip(980,0.12,'sine',0.15);},70); }
+  function sndItemUse(){ blip(1300,0.16,'sawtooth',0.22); }
+
+  /* ---------------------------------------------------------
+     RESET / START
+  --------------------------------------------------------- */
+  function resetPositions(servingSide){
+    mallet.left.x = field.left + field.w*0.15;
+    mallet.left.y = field.midYSafe();
+    mallet.right.x = field.right - field.w*0.15;
+    mallet.right.y = field.midYSafe();
+    mallet.left.vx = mallet.left.vy = 0;
+    mallet.right.vx = mallet.right.vy = 0;
+
+    puck.x = field.midX;
+    puck.y = field.midYSafe();
+    puck.minSpeed = puck.baseMinSpeed; // start each point at the slow serve speed
+    puck.rallyTime = 0;
+    puck.rallyHits = 0;
+    puck.curveUntil = 0; puck.curveDir = 0; puck.curveOwnerSide = null;
+    puck.ghostUntil = 0; puck.ghostOwnerSide = null;
+    var dir = servingSide === 'right' ? 1 : -1;
+    var ang = (Math.random()*0.6 - 0.3);
+    puck.vx = Math.cos(ang) * puck.minSpeed * dir;
+    puck.vy = Math.sin(ang) * puck.minSpeed;
+
+    // Note: intentionally NOT touching fieldItem / mallet.left.item /
+    // mallet.right.item / itemSpawnAt here — a floating item on the table
+    // and any item a player is holding both carry over across a goal, so a
+    // player who grabbed an item but hadn't used it yet can still use it on
+    // the very next point.
+
+    stuckWatch.x = puck.x; stuckWatch.y = puck.y; stuckWatch.timer = 0;
+  }
+  field.midYSafe = function(){ return (field.top + field.bottom) / 2; };
+
+  /* ---------------------------------------------------------
+     ITEMS (power-ups)
+  --------------------------------------------------------- */
+  function spawnItem(now){
+    var marginX = field.w * 0.16, marginY = field.h * 0.16;
+    var r = Math.min(field.w, field.h) * 0.045;
+    var x = field.left + marginX + Math.random() * (field.w - marginX*2);
+    var y = field.top + marginY + Math.random() * (field.h - marginY*2);
+    var type = ITEM_TYPE_KEYS[Math.floor(Math.random() * ITEM_TYPE_KEYS.length)];
+    var driftAngle = Math.random() * Math.PI * 2;
+    var driftSpeed = randRange(ITEM_DRIFT_SPEED_MIN, ITEM_DRIFT_SPEED_MAX);
+    fieldItem = {
+      type: type, x: x, y: y, r: r, bornAt: now,
+      vx: Math.cos(driftAngle) * driftSpeed,
+      vy: Math.sin(driftAngle) * driftSpeed
+    };
+  }
+
+  function tryPickupItem(m, now){
+    // Picking up an item while another (or the same) one is already active
+    // is allowed on purpose — effects stack rather than being blocked, so
+    // e.g. grabbing 'speed' while 'curve' is still active gives a curving
+    // super-fast shot. Each buff just lives in its own field on the mallet.
+    if (!fieldItem) return;
+    var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
+    if (Math.hypot(dx,dy) < m.r + fieldItem.r){
+      if (fieldItem.type === 'speed'){
+        // 'speed', 'curve' and 'giant' all power up the mallet itself the
+        // instant they're picked up — the effect applies continuously (or
+        // on every hit) for the buff window, rather than being a single
+        // pending charge consumed on the next hit like 'ghost' is.
+        m.speedUntil = now + ITEM_SPEED_BUFF_MS;
+      } else if (fieldItem.type === 'curve'){
+        m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS;
+      } else if (fieldItem.type === 'giant'){
+        m.giantUntil = now + ITEM_GIANT_BUFF_MS;
+      } else {
+        m.item = fieldItem.type;
+      }
+      fieldItem = null;
+      itemSpawnAt = now + randRange(5000, 9200) * itemFreqMult(); // 1.2x baseline frequency
+      sndItemGet();
+    }
+  }
+
+  // Scales m's radius up while a 'giant' buff is active, and back down to
+  // its normal chosen size (baseR) the instant the buff expires.
+  function applyGiantSize(m, now){
+    var mult = (m.giantUntil && now < m.giantUntil) ? ITEM_GIANT_MULT : 1;
+    m.r = m.baseR * mult;
+  }
+
+  // Returns the list of item effects currently active on mallet m (can be
+  // more than one at once, since effects stack) — used to draw one glow
+  // ring per active effect.
+  function getActiveMalletBuffs(m, now){
+    var types = [];
+    if (m.item) types.push(m.item); // pending 'ghost' charge
+    if (m.speedUntil && now < m.speedUntil) types.push('speed');
+    if (m.curveBuffUntil && now < m.curveBuffUntil) types.push('curve');
+    if (m.giantUntil && now < m.giantUntil) types.push('giant');
+    return types;
+  }
+
+  // 'ghost' item: the puck stays almost invisible, but briefly flashes into
+  // view the instant it touches a wall or a mallet — called from those
+  // collision spots so players get just enough of a cue to track it.
+  function ghostContactFlash(){
+    var now = performance.now();
+    if (puck.ghostUntil && now < puck.ghostUntil){
+      puck.ghostFlashUntil = now + ITEM_GHOST_FLASH_MS;
+    }
+  }
+
+  function updateItems(dt){
+    var now = performance.now();
+
+    // clear an expired speed/curve buff so the glow reverts to normal
+    if (mallet.left.speedUntil && now >= mallet.left.speedUntil) mallet.left.speedUntil = 0;
+    if (mallet.right.speedUntil && now >= mallet.right.speedUntil) mallet.right.speedUntil = 0;
+    if (mallet.left.curveBuffUntil && now >= mallet.left.curveBuffUntil) mallet.left.curveBuffUntil = 0;
+    if (mallet.right.curveBuffUntil && now >= mallet.right.curveBuffUntil) mallet.right.curveBuffUntil = 0;
+
+    // 'giant' buff continuously scales the mallet's radius (and the touch
+    // bounds that keep it on its own half) — recomputed every frame so it
+    // grows the instant it's picked up and shrinks back the instant it ends.
+    applyGiantSize(mallet.left, now);
+    applyGiantSize(mallet.right, now);
+    updateMalletBounds();
+
+    if (settings.itemFrequency === 'off') return; // items disabled entirely for this match
+
+    if (!fieldItem){
+      if (now >= itemSpawnAt) spawnItem(now);
+      return;
+    }
+
+    // slow, gentle drift around the court — bounces softly off the walls
+    fieldItem.x += fieldItem.vx * dt;
+    fieldItem.y += fieldItem.vy * dt;
+    if (fieldItem.x - fieldItem.r < field.left){ fieldItem.x = field.left + fieldItem.r; fieldItem.vx = Math.abs(fieldItem.vx); }
+    if (fieldItem.x + fieldItem.r > field.right){ fieldItem.x = field.right - fieldItem.r; fieldItem.vx = -Math.abs(fieldItem.vx); }
+    if (fieldItem.y - fieldItem.r < field.top){ fieldItem.y = field.top + fieldItem.r; fieldItem.vy = Math.abs(fieldItem.vy); }
+    if (fieldItem.y + fieldItem.r > field.bottom){ fieldItem.y = field.bottom - fieldItem.r; fieldItem.vy = -Math.abs(fieldItem.vy); }
+
+    tryPickupItem(mallet.left, now);
+    tryPickupItem(mallet.right, now);
+    if (fieldItem && now - fieldItem.bornAt > ITEM_LIFETIME_MS){
+      fieldItem = null;
+      itemSpawnAt = now + randRange(5000, 9200) * itemFreqMult(); // 1.2x baseline frequency
+    }
+  }
+
+  // Consumes m's pending 'ghost' item (if any) on a successful mallet-puck
+  // hit and applies its one-shot effect to the puck. 'speed' and 'curve' are
+  // handled separately in resolveMalletCollision since they're timed mallet
+  // buffs (every hit during the window triggers them), not a single pending
+  // charge that's used up on the first hit.
+  function applyItemEffect(m, side){
+    if (!m.item) return;
+    var type = m.item;
+    m.item = null; // used up — mallet glow reverts to normal immediately
+    if (type === 'ghost'){
+      puck.ghostUntil = performance.now() + ITEM_GHOST_MS;
+      puck.ghostOwnerSide = side; // only actually invisible while on the opponent's side
+    }
+    sndItemUse();
+  }
+
+  function startGame(){
+    score.left = 0; score.right = 0;
+    updateScoreDisplay();
+    document.getElementById('tagLeft').textContent = 'PLAYER 1';
+    document.getElementById('tagRight').textContent = settings.mode==='cpu' ? 'CPU' : 'PLAYER 2';
+    document.getElementById('targetInfo').textContent = settings.target + '点先取';
+    resize();
+
+    // items only reset for a brand-new match (rematch/new game) — not
+    // between points within the same match
+    fieldItem = null;
+    mallet.left.item = null;
+    mallet.right.item = null;
+    mallet.left.speedUntil = 0;
+    mallet.right.speedUntil = 0;
+    mallet.left.curveBuffUntil = 0;
+    mallet.right.curveBuffUntil = 0;
+    mallet.left.giantUntil = 0;
+    mallet.right.giantUntil = 0;
+    mallet.left.r = mallet.left.baseR;
+    mallet.right.r = mallet.right.baseR;
+    itemSpawnAt = performance.now() + randRange(3300, 5800) * itemFreqMult(); // 1.2x baseline frequency
+
+    resetPositions(Math.random() < 0.5 ? 'left':'right');
+    state = STATE_PLAY;
+    show('play');
+    lastT = performance.now();
+    requestAnimationFrame(loop);
+  }
+
+  function updateScoreDisplay(){
+    document.getElementById('scoreLeft').textContent = score.left;
+    document.getElementById('scoreRight').textContent = score.right;
+  }
+
+  function show(which){
+    document.getElementById('titleScreen').classList.toggle('hidden', which!=='title');
+    document.getElementById('menu').classList.toggle('hidden', which!=='settings');
+    document.getElementById('pauseOverlay').classList.toggle('hidden', which!=='pause');
+    document.getElementById('endOverlay').classList.toggle('hidden', which!=='end');
+    document.getElementById('hud').classList.toggle('hidden', which==='title' || which==='settings');
+  }
+
+  /* ---------------------------------------------------------
+     INPUT — MULTITOUCH
+  --------------------------------------------------------- */
+  function clampTo(bounds, x, y){
+    return {
+      x: Math.min(bounds.maxX, Math.max(bounds.minX, x)),
+      y: Math.min(bounds.maxY, Math.max(bounds.minY, y))
+    };
+  }
+
+  // Converts a physical, canvas-relative touch/mouse point into the
+  // simulation's "virtual" (always left/right landscape) coordinate space —
+  // the exact inverse of the rotation render() applies when
+  // useRotatedLayout is on. A no-op when it's off (iPad, or a phone held
+  // sideways).
+  function toVirtualXY(x, y){
+    if (!useRotatedLayout) return { x: x, y: y };
+    // matches the translate(0,H)+rotate(-90°) transform in render(): the
+    // simulation's "left" side (the human player in CPU mode) ends up at
+    // the physical BOTTOM of the phone, within reach of whoever is holding it.
+    return { x: H - y, y: x };
+  }
+
+  function assignTouch(id, x){
+    if (settings.mode === 'cpu'){
+      return 'left'; // human always controls left mallet
+    }
+    return x < field.midX ? 'left' : 'right';
+  }
+
+  canvas.addEventListener('touchstart', function(e){
+    if (state !== STATE_PLAY) return;
+    e.preventDefault();
+    ensureAudio(); // real touch gesture — good moment to (re)unlock iOS audio
+    var rect = canvas.getBoundingClientRect();
+    for (var i=0;i<e.changedTouches.length;i++){
+      var t = e.changedTouches[i];
+      var raw = toVirtualXY(t.clientX - rect.left, t.clientY - rect.top);
+      var x = raw.x, y = raw.y;
+      var side = assignTouch(t.identifier, x);
+      if (side === 'right' && settings.mode === 'cpu') continue;
+      if (touchMap[side] !== undefined) continue; // side already controlled by another finger
+      touchMap[side] = t.identifier;
+      mallet[side].active = true;
+      var b = side==='left' ? field.leftBounds : field.rightBounds;
+      var p = clampTo(b, x, y);
+      mallet[side].x = p.x; mallet[side].y = p.y;
+      lastTouchClientPos[side] = { x: x, y: y };
+    }
+  }, {passive:false});
+
+  canvas.addEventListener('touchmove', function(e){
+    // Always prevent default (stop scroll/bounce) and keep tracking the
+    // finger's latest position, even during a brief input freeze (e.g. a
+    // goal celebration) — only the actual mallet movement is gated on
+    // STATE_PLAY below, so nothing is lost while frozen.
+    e.preventDefault();
+    var rect = canvas.getBoundingClientRect();
+    for (var i=0;i<e.changedTouches.length;i++){
+      var t = e.changedTouches[i];
+      var side = null;
+      for (var k in touchMap){ if (touchMap[k]===t.identifier) side = k; }
+      if (!side) continue;
+      var raw = toVirtualXY(t.clientX - rect.left, t.clientY - rect.top);
+      var x = raw.x, y = raw.y;
+      lastTouchClientPos[side] = { x: x, y: y };
+      if (state !== STATE_PLAY) continue;
+      var b = side==='left' ? field.leftBounds : field.rightBounds;
+      var p = clampTo(b, x, y);
+      var m = mallet[side];
+      m.vx = p.x - m.x; m.vy = p.y - m.y;
+      m.x = p.x; m.y = p.y;
+    }
+  }, {passive:false});
+
+  function releaseTouch(e){
+    for (var i=0;i<e.changedTouches.length;i++){
+      var t = e.changedTouches[i];
+      for (var k in touchMap){
+        if (touchMap[k] === t.identifier){
+          delete touchMap[k];
+          mallet[k].active = false;
+          mallet[k].vx = 0; mallet[k].vy = 0;
+          lastTouchClientPos[k] = null;
+        }
+      }
+    }
+  }
+
+  // Snaps each side's mallet to wherever its finger actually is right now,
+  // for any touch that stayed down through a goal celebration. Without
+  // this, a finger that stopped moving during the freeze would leave the
+  // mallet stranded at its just-reset home position until the next
+  // touchmove event — i.e. the exact "touching but mallet won't follow"
+  // symptom reported after scoring.
+  function resyncHeldTouches(){
+    ['left','right'].forEach(function(side){
+      if (touchMap[side] === undefined || !lastTouchClientPos[side]) return;
+      var b = side==='left' ? field.leftBounds : field.rightBounds;
+      var p = clampTo(b, lastTouchClientPos[side].x, lastTouchClientPos[side].y);
+      var m = mallet[side];
+      m.x = p.x; m.y = p.y; m.vx = 0; m.vy = 0;
+    });
+  }
+  canvas.addEventListener('touchend', releaseTouch, {passive:false});
+  canvas.addEventListener('touchcancel', releaseTouch, {passive:false});
+
+  // Mouse fallback (desktop testing)
+  var mouseSide = null;
+  canvas.addEventListener('mousedown', function(e){
+    if (state !== STATE_PLAY) return;
+    var rect = canvas.getBoundingClientRect();
+    var raw = toVirtualXY(e.clientX-rect.left, e.clientY-rect.top);
+    mouseSide = assignTouch(0, raw.x);
+    if (mouseSide==='right' && settings.mode==='cpu'){ mouseSide=null; return; }
+    mallet[mouseSide].active = true;
+  });
+  canvas.addEventListener('mousemove', function(e){
+    if (!mouseSide || state !== STATE_PLAY) return;
+    var rect = canvas.getBoundingClientRect();
+    var raw = toVirtualXY(e.clientX-rect.left, e.clientY-rect.top);
+    var x = raw.x, y = raw.y;
+    var b = mouseSide==='left'?field.leftBounds:field.rightBounds;
+    var p = clampTo(b,x,y);
+    var m = mallet[mouseSide];
+    m.vx = p.x-m.x; m.vy=p.y-m.y;
+    m.x = p.x; m.y = p.y;
+  });
+  window.addEventListener('mouseup', function(){
+    if (mouseSide){ mallet[mouseSide].active=false; mallet[mouseSide].vx=0; mallet[mouseSide].vy=0; }
+    mouseSide = null;
+  });
+
+  /* ---------------------------------------------------------
+     CPU AI
+  --------------------------------------------------------- */
+  function predictPuckYAtX(targetX){
+    var x = puck.x, y = puck.y, vx = puck.vx, vy = puck.vy;
+    if (Math.abs(vx) < 0.01) return y;
+    var steps = 0;
+    while (((vx>0 && x < targetX) || (vx<0 && x > targetX)) && steps < 400){
+      x += vx; y += vy;
+      if (y < field.top + puck.r){ y = field.top+puck.r + (field.top+puck.r-y); vy = -vy; }
+      if (y > field.bottom - puck.r){ y = field.bottom-puck.r - (y-(field.bottom-puck.r)); vy = -vy; }
+      steps++;
+    }
+    return y;
+  }
+
+  function updateCPU(dt){
+    var d = DIFF[settings.difficulty];
+    var m = mallet.right;
+    var homeX = field.right - field.w*0.15;
+
+    cpu.lastDecision -= dt;
+    if (cpu.lastDecision <= 0){
+      cpu.lastDecision = d.reaction;
+      if (puck.vx > 0){
+        // puck heading toward CPU: predict intercept
+        var predY = predictPuckYAtX(m.x);
+
+        // 'hard' plays smarter, not just faster: aim the return shot toward
+        // whichever goal corner is farthest from the human's current mallet
+        // position, by approaching the puck slightly off-center so the
+        // deflection angles away from where they're standing.
+        if (settings.difficulty === 'hard'){
+          var midY = field.midYSafe();
+          var humanY = mallet.left.y;
+          var aimUp = humanY > midY; // human is low half -> aim the shot high, and vice versa
+          var aimBias = m.r * 0.5;
+          predY += aimUp ? -aimBias : aimBias;
+        }
+
+        predY += (Math.random()*2-1) * d.error;
+        cpu.targetY = predY;
+        cpu.mode = 'attack';
+      } else {
+        cpu.mode = 'defend';
+        cpu.targetY = field.midYSafe() + (Math.random()*2-1) * d.error * 0.5;
+      }
+    }
+
+    // even while defending/waiting, more aggressive difficulties hover
+    // closer to the midline instead of always retreating all the way home —
+    // this makes 'hard' feel like it's constantly pressuring, not just
+    // reacting once the puck is already incoming.
+    var targetX = homeX - (homeX - field.midX) * (d.aggressiveness * 0.4);
+    if (cpu.mode === 'attack' && puck.vx > 0){
+      // move forward to meet puck if it's on CPU's side and close
+      if (puck.x > field.midX){
+        targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, puck.x - puck.r - m.r*0.2));
+      }
+    }
+    var targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, cpu.targetY));
+
+    // when not urgently returning the puck, go grab a power-up if one is out
+    // — items stack now, so the CPU always benefits from grabbing another
+    // one even if it's already buffed
+    if (fieldItem && cpu.mode !== 'attack'){
+      targetX = Math.min(field.rightBounds.maxX, Math.max(field.rightBounds.minX, fieldItem.x));
+      targetY = Math.min(field.rightBounds.maxY, Math.max(field.rightBounds.minY, fieldItem.y));
+    }
+
+    var dx = targetX - m.x, dy = targetY - m.y;
+    var dist = Math.hypot(dx,dy);
+    var speed = d.maxSpeed;
+    if (dist > 0.01){
+      var step = Math.min(dist, speed);
+      var nvx = dx/dist*step, nvy = dy/dist*step;
+      m.vx = nvx; m.vy = nvy;
+      m.x += nvx; m.y += nvy;
+    } else {
+      m.vx = 0; m.vy = 0;
+    }
+    var b = field.rightBounds;
+    m.x = Math.min(b.maxX, Math.max(b.minX, m.x));
+    m.y = Math.min(b.maxY, Math.max(b.minY, m.y));
+  }
+
+  /* ---------------------------------------------------------
+     PHYSICS
+  --------------------------------------------------------- */
+  function resolveMalletCollision(m, side){
+    var dx = puck.x - m.x, dy = puck.y - m.y;
+    var dist = Math.hypot(dx,dy);
+    var minDist = puck.r + m.r;
+    if (dist < minDist && dist > 0.0001){
+      var nx = dx/dist, ny = dy/dist;
+      // push puck out
+      var overlap = minDist - dist;
+      puck.x += nx*overlap; puck.y += ny*overlap;
+      puck.rallyHits++; // each exchange nudges the rally-speed ramp forward
+
+      // relative velocity
+      var rvx = puck.vx - m.vx, rvy = puck.vy - m.vy;
+      var relSpeed = rvx*nx + rvy*ny;
+      if (relSpeed < 0){
+        var restitution = 1.22; // exaggerate the bounce a bit for more punchy hits
+        puck.vx -= (1+restitution) * relSpeed * nx;
+        puck.vy -= (1+restitution) * relSpeed * ny;
+      }
+      // add a bit of mallet's own motion as extra kick — boosted so a fast
+      // swing visibly sends the puck flying faster than a slow tap
+      puck.vx += m.vx * 0.75;
+      puck.vy += m.vy * 0.75;
+
+      // every mallet hit adds a little energy overall, on top of the swing
+      // kick above — table-tennis-style, the puck gets livelier as it's hit
+      puck.vx *= MALLET_HIT_ACCEL;
+      puck.vy *= MALLET_HIT_ACCEL;
+
+      var spd = Math.hypot(puck.vx, puck.vy);
+      if (spd > puck.maxSpeed){
+        puck.vx = puck.vx/spd*puck.maxSpeed;
+        puck.vy = puck.vy/spd*puck.maxSpeed;
+      }
+      sndHit(spd);
+      ghostContactFlash();
+
+      // 'speed' item: while the buff is active, every hit fires a
+      // super-speed shot (this can push past the normal maxSpeed cap)
+      var now = performance.now();
+      if (m.speedUntil && now < m.speedUntil){
+        var spd2 = Math.hypot(puck.vx, puck.vy) || 1;
+        puck.vx = puck.vx / spd2 * ITEM_SPEED_BOOST;
+        puck.vy = puck.vy / spd2 * ITEM_SPEED_BOOST;
+        sndItemUse();
+      }
+
+      // 'curve' item: while the buff is active, every hit sends the puck
+      // off on a fresh bending trajectory (doesn't consume the buff). If
+      // the OTHER player (no active curve buff) returns a shot that's still
+      // curving, their hit breaks the curve and it flies straight again.
+      if (m.curveBuffUntil && now < m.curveBuffUntil){
+        puck.curveUntil = now + ITEM_CURVE_MS;
+        puck.curveDir = Math.random() < 0.5 ? 1 : -1;
+        puck.curveStart = now;
+        puck.curveSeed = Math.random() * 1000;
+        puck.curveOwnerSide = side; // only bends while on this side's opponent half
+        sndItemUse();
+      } else if (puck.curveUntil){
+        puck.curveUntil = 0;
+        puck.curveDir = 0;
+        puck.curveOwnerSide = null;
+      }
+
+      // a pending 'ghost' item (if any) fires once, on this hit
+      applyItemEffect(m, side);
+    }
+  }
+
+  function stepPuck(dt){
+    // 'curve' item: steer the puck's heading (not its speed) for a short
+    // window right after the special hit, producing a bending trajectory.
+    // The turn strength wobbles over time (two overlapping sine waves) so
+    // the bend feels irregular/unpredictable rather than one smooth arc —
+    // it'll surge, ease off, and sometimes briefly reverse.
+    if (puck.curveUntil){
+      var now = performance.now();
+      if (now < puck.curveUntil){
+        // only actually bends while the puck is on the opponent's half —
+        // crossing back to the activating player's own side flies straight
+        if (isOpponentSide(puck.curveOwnerSide, puck.x)){
+          var curSpd = Math.hypot(puck.vx, puck.vy);
+          if (curSpd > 0.01){
+            var elapsed = now - puck.curveStart;
+            var wobble = Math.sin(elapsed*0.006 + puck.curveSeed) * 0.75
+                       + Math.sin(elapsed*0.017 + puck.curveSeed*2.3) * 0.55;
+            var turnAmt = ITEM_CURVE_TURN_RATE * (1 + wobble);
+            var ang = Math.atan2(puck.vy, puck.vx) + puck.curveDir * turnAmt;
+            puck.vx = Math.cos(ang) * curSpd;
+            puck.vy = Math.sin(ang) * curSpd;
+          }
+        }
+      } else {
+        puck.curveUntil = 0; puck.curveDir = 0; puck.curveOwnerSide = null;
+      }
+    }
+
+    var steps = 2; // sub-steps for stability
+    for (var s=0;s<steps;s++){
+      puck.x += puck.vx/steps;
+      puck.y += puck.vy/steps;
+
+      // top/bottom walls
+      if (puck.y - puck.r < field.top){
+        puck.y = field.top + puck.r;
+        puck.vy = -puck.vy;
+        puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL; // walls sap a little energy
+        sndWall(); ghostContactFlash();
+      } else if (puck.y + puck.r > field.bottom){
+        puck.y = field.bottom - puck.r;
+        puck.vy = -puck.vy;
+        puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
+        sndWall(); ghostContactFlash();
+      }
+
+      // left wall / goal
+      if (puck.x - puck.r < field.left){
+        if (puck.y > field.goalTopLeft + puck.r*0.3 && puck.y < field.goalBottomLeft - puck.r*0.3){
+          if (puck.x + puck.r < field.left - 4){
+            handleGoal('right');
+            return;
+          }
+        } else {
+          puck.x = field.left + puck.r;
+          puck.vx = -puck.vx;
+          puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
+          sndWall(); ghostContactFlash();
+        }
+      }
+      // right wall / goal
+      if (puck.x + puck.r > field.right){
+        if (puck.y > field.goalTopRight + puck.r*0.3 && puck.y < field.goalBottomRight - puck.r*0.3){
+          if (puck.x - puck.r > field.right + 4){
+            handleGoal('left');
+            return;
+          }
+        } else {
+          puck.x = field.right - puck.r;
+          puck.vx = -puck.vx;
+          puck.vx *= WALL_BOUNCE_DECEL; puck.vy *= WALL_BOUNCE_DECEL;
+          sndWall(); ghostContactFlash();
+        }
+      }
+    }
+
+    resolveMalletCollision(mallet.left, 'left');
+    resolveMalletCollision(mallet.right, 'right');
+
+    // gradually raise min speed as the rally goes on — mostly driven by how
+    // many times the puck has been hit, with a slow time-based nudge too so
+    // long wall-bounce rallies without a hit still creep up a little.
+    puck.rallyTime += dt;
+    var timeT = Math.min(1, puck.rallyTime / 30);
+    var hitT = Math.min(1, puck.rallyHits / 10);
+    var t = Math.max(timeT, hitT);
+    puck.minSpeed = puck.baseMinSpeed + (puck.maxMinSpeed - puck.baseMinSpeed) * t;
+    var curSpeed = Math.hypot(puck.vx, puck.vy);
+    if (curSpeed < puck.minSpeed && curSpeed > 0.001){
+      var f = puck.minSpeed / curSpeed;
+      puck.vx *= f; puck.vy *= f;
+    }
+  }
+
+  // Runs once per real second-tracked frame (dtReal = real elapsed seconds).
+  // If the puck hasn't traveled more than STUCK_MOVE_THRESHOLD px in
+  // STUCK_TIMEOUT_S seconds, it's considered wedged (e.g. pinned in a
+  // corner against a mallet) and gets pushed firmly back toward center.
+  function updateStuckWatchdog(dtReal){
+    var moved = Math.hypot(puck.x - stuckWatch.x, puck.y - stuckWatch.y);
+    if (moved > STUCK_MOVE_THRESHOLD){
+      stuckWatch.x = puck.x; stuckWatch.y = puck.y; stuckWatch.timer = 0;
+      return;
+    }
+    stuckWatch.timer += dtReal;
+    if (stuckWatch.timer > STUCK_TIMEOUT_S){
+      var cx = field.midX, cy = field.midYSafe();
+      var dx = cx - puck.x, dy = cy - puck.y;
+      var d = Math.hypot(dx, dy) || 1;
+      var speed = Math.max(puck.minSpeed * 2.2, 7);
+      puck.vx = dx / d * speed;
+      puck.vy = dy / d * speed;
+      puck.x += (dx / d) * puck.r; // nudge clear of the wall/mallet so it isn't re-trapped instantly
+      puck.y += (dy / d) * puck.r;
+      stuckWatch.x = puck.x; stuckWatch.y = puck.y; stuckWatch.timer = 0;
+    }
+  }
+
+  var GOAL_CELEBRATION_MS = 1300;
+
+  function handleGoal(scoredSide){
+    if (scoredSide === 'left') score.left++; else score.right++;
+    updateScoreDisplay();
+    sndGoal();
+    puck.vx = 0; puck.vy = 0;
+
+    var isGameOver = (score.left >= settings.target || score.right >= settings.target);
+    state = STATE_GOAL; // freezes input + game loop until celebration ends
+    showGoalFlash(scoredSide);
+
+    setTimeout(function(){
+      hideGoalFlash();
+      if (isGameOver){
+        endGame();
+      } else {
+        resetPositions(scoredSide === 'left' ? 'right' : 'left');
+        resyncHeldTouches(); // fingers held through the celebration snap to their real position
+        state = STATE_PLAY;
+        lastT = performance.now();
+        requestAnimationFrame(loop);
+      }
+    }, GOAL_CELEBRATION_MS);
+  }
+
+  function showGoalFlash(scoredSide){
+    var el = document.getElementById('goalFlash');
+    var color = scoredSide === 'left' ? '#00f6ff' : '#ff2bd6';
+    var label = scoredSide === 'left' ? 'PLAYER 1 GOAL!' : (settings.mode==='cpu' ? 'CPU GOAL!' : 'PLAYER 2 GOAL!');
+    el.innerHTML =
+      '<div class="bgFlash" style="background:'+color+';"></div>' +
+      '<div class="flashText" style="text-shadow:0 0 20px '+color+', 0 0 60px '+color+';">'+label+'</div>';
+    el.classList.remove('hidden');
+    requestAnimationFrame(function(){ el.classList.add('show'); });
+  }
+
+  function hideGoalFlash(){
+    var el = document.getElementById('goalFlash');
+    el.classList.remove('show');
+    el.classList.add('hidden');
+    el.innerHTML = '';
+  }
+
+  function endGame(){
+    state = STATE_END;
+    var winner = score.left > score.right ? 'PLAYER 1' : (settings.mode==='cpu' ? 'CPU' : 'PLAYER 2');
+    document.getElementById('endTitle').textContent = winner + ' WINS';
+    document.getElementById('endScore').textContent = score.left + ' - ' + score.right;
+    show('end');
+  }
+
+  /* ---------------------------------------------------------
+     RENDER
+  --------------------------------------------------------- */
+  function drawField(){
+    // outer glow border
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,246,255,0.9)';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#00f6ff';
+    ctx.shadowBlur = 18;
+    roundRectPath(field.left, field.top, field.w, field.h, 18);
+    ctx.stroke();
+    ctx.restore();
+
+    // center line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([10,10]);
+    ctx.beginPath();
+    ctx.moveTo(field.midX, field.top+6);
+    ctx.lineTo(field.midX, field.bottom-6);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // center circle
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(field.midX, field.midYSafe(), Math.min(field.w,field.h)*0.14, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.restore();
+
+    // goals
+    drawGoal(field.left, 'left');
+    drawGoal(field.right, 'right');
+  }
+
+  var GOAL_COLORS = {
+    left:  { solid:'rgba(0,246,255,1)',   mid:'rgba(0,246,255,0.4)',   clear:'rgba(0,246,255,0)' },
+    right: { solid:'rgba(255,43,214,1)',  mid:'rgba(255,43,214,0.4)',  clear:'rgba(255,43,214,0)' }
+  };
+
+  function drawGoal(x, side){
+    var top = side==='left' ? field.goalTopLeft : field.goalTopRight;
+    var bottom = side==='left' ? field.goalBottomLeft : field.goalBottomRight;
+    var c = GOAL_COLORS[side];
+    var dirIn = side==='left' ? 1 : -1;
+    var depth = field.w * 0.09;
+    var pulse = 0.75 + 0.25 * Math.sin(performance.now() / 380);
+
+    ctx.save();
+
+    // glowing goal-mouth zone fading into the field
+    var grad = ctx.createLinearGradient(x, 0, x + dirIn*depth, 0);
+    grad.addColorStop(0, c.mid);
+    grad.addColorStop(1, c.clear);
+    ctx.fillStyle = grad;
+    ctx.fillRect(Math.min(x, x + dirIn*depth), top, depth, bottom - top);
+
+    // net hatch pattern
+    ctx.strokeStyle = c.mid;
+    ctx.lineWidth = 1.5;
+    for (var yy = top; yy < bottom; yy += 14){
+      ctx.beginPath();
+      ctx.moveTo(x, yy);
+      ctx.lineTo(x + dirIn*depth*0.65, yy + 10);
+      ctx.stroke();
+    }
+
+    // goal line itself — thick, glowing, gently pulsing
+    ctx.strokeStyle = c.solid;
+    ctx.shadowColor = c.solid;
+    ctx.shadowBlur = 18 + 14*pulse;
+    ctx.lineWidth = 8;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+
+    // goal posts (bright caps top & bottom)
+    [top, bottom].forEach(function(yy){
+      ctx.beginPath();
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = c.solid;
+      ctx.shadowBlur = 24;
+      ctx.arc(x, yy, 8, 0, Math.PI*2);
+      ctx.fill();
+    });
+
+    ctx.restore();
+  }
+
+  function roundRectPath(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  function drawMallet(m, color, iconImg, rotation){
+    var hasIcon = iconImg && iconImg.complete && iconImg.naturalWidth > 0;
+    rotation = rotation || 0;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
+
+    if (hasIcon){
+      ctx.save();
+      ctx.clip();
+      // rotated per-side so the photo faces whoever is standing at that
+      // edge of the flat-lying iPad (see rotation values passed by render()).
+      ctx.translate(m.x, m.y);
+      ctx.rotate(rotation);
+      ctx.drawImage(iconImg, -m.r, -m.r, m.r*2, m.r*2);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = 'rgba(6,6,24,0.9)';
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = m.active ? 26 : 14;
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    if (!hasIcon){
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r*0.4, 0, Math.PI*2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // holding any un-used/active power-ups: wrap the mallet in a pulsing
+    // glow ring per effect (items now stack, so more than one can be lit up
+    // at once — each gets its own ring at an increasing radius). Each ring
+    // disappears the instant that specific effect is used up or expires.
+    var nowT = performance.now();
+    var activeTypes = getActiveMalletBuffs(m, nowT);
+    activeTypes.forEach(function(type, i){
+      var itemInfo = ITEM_TYPES[type];
+      var pulse = 0.6 + 0.4 * Math.sin((nowT + i*90) / 150);
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, m.r * (1.3 + i*0.24), 0, Math.PI*2);
+      ctx.strokeStyle = itemInfo.color;
+      ctx.shadowColor = itemInfo.color;
+      ctx.shadowBlur = 16 + 18 * pulse;
+      ctx.lineWidth = 4.5;
+      ctx.globalAlpha = 0.88;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    });
+
+    ctx.restore();
+  }
+
+  function drawItem(){
+    if (!fieldItem) return;
+    var info = ITEM_TYPES[fieldItem.type];
+    var now = performance.now();
+    var bob = Math.sin(now / 260) * 4;
+    var pulse = 0.75 + 0.25 * Math.sin(now / 300);
+    var remaining = ITEM_LIFETIME_MS - (now - fieldItem.bornAt);
+
+    ctx.save();
+    if (remaining < 1200){ ctx.globalAlpha = Math.max(0.2, remaining / 1200); }
+    ctx.translate(fieldItem.x, fieldItem.y + bob);
+
+    ctx.beginPath();
+    ctx.arc(0, 0, fieldItem.r, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(6,6,24,0.85)';
+    ctx.fill();
+    ctx.strokeStyle = info.color;
+    ctx.shadowColor = info.color;
+    ctx.shadowBlur = 14 + 16 * pulse;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.shadowBlur = 0;
+    ctx.font = Math.round(fieldItem.r * 1.2) + 'px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(info.emoji, 0, 1);
+
+    ctx.restore();
+  }
+
+  function drawPuck(){
+    var now = performance.now();
+    // only actually hides while the puck is on the opponent's half —
+    // crossing back to the activating player's own side reveals it
+    var ghosted = puck.ghostUntil && now < puck.ghostUntil && isOpponentSide(puck.ghostOwnerSide, puck.x);
+    ctx.save();
+    if (ghosted){
+      // 'ghost' item effect: the puck stays nearly invisible (a dark color,
+      // barely-there alpha) except right after it touches a wall or mallet,
+      // when it briefly flashes into a pale, visible ghost-glow.
+      var flashing = puck.ghostFlashUntil && now < puck.ghostFlashUntil;
+      ctx.fillStyle = flashing ? ITEM_GHOST_FLASH_COLOR : ITEM_GHOST_COLOR;
+      ctx.globalAlpha = flashing ? ITEM_GHOST_FLASH_ALPHA : ITEM_GHOST_ALPHA;
+      if (flashing){
+        ctx.shadowColor = ITEM_GHOST_FLASH_COLOR;
+        ctx.shadowBlur = 16;
+      }
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = '#ffe100';
+      ctx.shadowBlur = 24;
+      ctx.beginPath();
+      ctx.arc(puck.x, puck.y, puck.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+    if (puck.ghostUntil && now >= puck.ghostUntil){ puck.ghostUntil = 0; puck.ghostFlashUntil = 0; }
+  }
+
+  function render(){
+    // Clear the whole physical canvas BEFORE any rotation transform below —
+    // clearRect always clears in the current coordinate space, so doing it
+    // pre-rotation guarantees the full real screen gets wiped regardless of
+    // whether the phone top/bottom rotation is active this frame.
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.save();
+    if (useRotatedLayout){
+      // Rotate the whole scene so the simulation's native left/right split
+      // (everything below still thinks in those terms) renders as a
+      // top/bottom split on a phone's portrait screen — with the "left"
+      // side (the human player in CPU mode) landing at the physical BOTTOM
+      // of the screen, within thumb's reach. Touch input gets the matching
+      // inverse transform — see toVirtualXY().
+      ctx.translate(0, H);
+      ctx.rotate(-Math.PI/2);
+    }
+
+    drawField();
+    drawItem();
+    // Players sit facing each other across the table, so each one's icon is
+    // rotated to face them — left rotates 90° clockwise, right rotates 90°
+    // counter-clockwise. (On phones this composes with the 90° scene
+    // rotation above and still works out correctly for each side.)
+    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), Math.PI/2);
+    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), -Math.PI/2);
+    drawPuck();
+
+    ctx.restore();
+  }
+
+  /* ---------------------------------------------------------
+     LOOP
+  --------------------------------------------------------- */
+  var lastT = 0;
+  function loop(now){
+    if (state !== STATE_PLAY){ return; }
+    var dt = Math.min(0.033, (now - lastT) / 1000 || 0.016);
+    lastT = now;
+
+    if (settings.mode === 'cpu'){ updateCPU(dt * 60); }
+    updateItems(dt); // dt here is real seconds, used for the item's drift movement
+    updateStuckWatchdog(dt);
+    stepPuck(dt * 60 * 0.5); // scale to keep speeds sane relative to px
+
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  /* ---------------------------------------------------------
+     MENU WIRING
+  --------------------------------------------------------- */
+  function selectGroup(selector, dataAttr, value, cb){
+    var btns = document.querySelectorAll(selector);
+    btns.forEach(function(b){
+      b.addEventListener('click', function(){
+        sndClick(); ensureAudio();
+        btns.forEach(function(x){ x.classList.remove('selected'); });
+        b.classList.add('selected');
+        cb(b.dataset[dataAttr]);
+      });
+    });
+  }
+
+  function resetGoalSizeUI(){
+    settings.goalSizeLeft = 'normal';
+    settings.goalSizeRight = 'normal';
+    document.querySelectorAll('.goalL-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.goal === 'normal');
+    });
+    document.querySelectorAll('.goalR-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.goal === 'normal');
+    });
+  }
+
+  // Mode buttons exist on BOTH the title screen and the settings screen —
+  // setMode() keeps every '.mode-btn' (regardless of which screen it's on)
+  // in sync, since selectGroup() alone would only highlight the one that
+  // was actually clicked.
+  // How each side should be labeled in the settings UI — in CPU mode the
+  // right mallet isn't a second human, so it's clearer to call the sides
+  // "あなた"(you)/"CPU" instead of "左"/"右".
+  function playerLabel(side){
+    if (settings.mode === 'cpu'){
+      return side === 'left' ? 'P1（あなた）' : 'P2（CPU）';
+    }
+    return side === 'left' ? 'P1（左）' : 'P2（右）';
+  }
+
+  function setMode(v){
+    settings.mode = v;
+    document.querySelectorAll('.mode-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.mode === v);
+    });
+    var diffGroup = document.getElementById('diffGroup');
+    diffGroup.style.opacity = v==='cpu' ? '1' : '0.3';
+    diffGroup.style.pointerEvents = v==='cpu' ? 'auto' : 'none';
+    document.querySelectorAll('.goal-block').forEach(function(el){
+      el.style.opacity = v==='2p' ? '1' : '0.3';
+      el.style.pointerEvents = v==='2p' ? 'auto' : 'none';
+    });
+    if (v === 'cpu') resetGoalSizeUI();
+    // the settings screen no longer has its own mode toggle (mode is chosen
+    // on the title screen) — show a small label instead so it's clear which
+    // mode is active without having to go back
+    var label = document.getElementById('settingsModeLabel');
+    if (label) label.textContent = 'モード：' + (v === 'cpu' ? 'CPU対戦' : '2人対戦');
+    // refresh the P1/P2 column headings (P1(あなた)/P2(CPU) vs P1(左)/P2(右))
+    var titleL = document.getElementById('playerColTitleL');
+    var titleR = document.getElementById('playerColTitleR');
+    if (titleL) titleL.textContent = playerLabel('left');
+    if (titleR) titleR.textContent = playerLabel('right');
+  }
+  document.querySelectorAll('.mode-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      sndClick(); ensureAudio();
+      setMode(b.dataset.mode);
+    });
+  });
+  // The title screen's mode buttons additionally navigate straight into
+  // the detailed settings screen once a mode is chosen.
+  document.getElementById('titleModeCpu').addEventListener('click', function(){ show('settings'); });
+  document.getElementById('titleMode2p').addEventListener('click', function(){ show('settings'); });
+  document.getElementById('backToTitleBtn').addEventListener('click', function(){
+    sndClick(); show('title');
+  });
+  selectGroup('.diff-btn', 'diff', null, function(v){ settings.difficulty = v; });
+  selectGroup('.goalL-btn', 'goal', null, function(v){ settings.goalSizeLeft = v; });
+  selectGroup('.goalR-btn', 'goal', null, function(v){ settings.goalSizeRight = v; });
+  selectGroup('.malletL-btn', 'mallet', null, function(v){ settings.malletSizeLeft = v; });
+  selectGroup('.malletR-btn', 'mallet', null, function(v){ settings.malletSizeRight = v; });
+  selectGroup('.freq-btn', 'freq', null, function(v){ settings.itemFrequency = v; });
+  selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
+  selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
+
+  /* ---------------------------------------------------------
+     FULLSCREEN
+     iOS Safari (with "Add to Home Screen") hides all browser
+     chrome automatically. Chrome on iPad cannot remove its
+     address bar permanently, but the Fullscreen API — where
+     supported — hides it while this page is in the foreground.
+  --------------------------------------------------------- */
+  // Rough phone-vs-tablet heuristic: phones' short side is well under
+  // ~600px in CSS pixels; iPads (and larger tablets) are comfortably above
+  // it. Re-evaluated on demand since orientation changes which of
+  // innerWidth/innerHeight is the "short" one.
+  function isPhoneSize(){
+    return Math.min(window.innerWidth, window.innerHeight) < 600;
+  }
+
+  function tryFullscreen(){
+    var el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+    if (req){
+      try{ req.call(el); }catch(e){ /* not supported on this browser/OS version — ignore */ }
+    }
+  }
+  /* ---------------------------------------------------------
+     ICON PICKER (popup)
+  --------------------------------------------------------- */
+  var iconPickSide = 'left';
+
+  function updateIconPickThumb(side){
+    var key = side === 'left' ? settings.iconLeft : settings.iconRight;
+    var thumbEl = document.getElementById(side === 'left' ? 'iconPickThumbL' : 'iconPickThumbR');
+    if (key && key !== 'none' && ICON_SRC[key]){
+      thumbEl.innerHTML = '<img src="'+ICON_SRC[key]+'" alt="">';
+    } else {
+      thumbEl.textContent = '✕';
+    }
+  }
+
+  function openIconPicker(side){
+    iconPickSide = side;
+    document.getElementById('iconPickerTitle').textContent =
+      playerLabel(side) + 'のアイコンを選択';
+    var current = side === 'left' ? settings.iconLeft : settings.iconRight;
+    document.querySelectorAll('.icon-choice-btn').forEach(function(b){
+      b.classList.toggle('selected', b.dataset.icon === current);
+    });
+    document.getElementById('iconPickerOverlay').classList.remove('hidden');
+  }
+
+  function closeIconPicker(){
+    document.getElementById('iconPickerOverlay').classList.add('hidden');
+  }
+
+  document.getElementById('iconPickL').addEventListener('click', function(){
+    sndClick(); ensureAudio(); openIconPicker('left');
+  });
+  document.getElementById('iconPickR').addEventListener('click', function(){
+    sndClick(); ensureAudio(); openIconPicker('right');
+  });
+  document.getElementById('iconPickerClose').addEventListener('click', function(){
+    sndClick(); closeIconPicker();
+  });
+
+  document.querySelectorAll('.icon-choice-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      sndClick(); ensureAudio();
+      document.querySelectorAll('.icon-choice-btn').forEach(function(x){ x.classList.remove('selected'); });
+      b.classList.add('selected');
+      var v = b.dataset.icon;
+      if (iconPickSide === 'left'){ settings.iconLeft = v; } else { settings.iconRight = v; }
+      updateIconPickThumb(iconPickSide);
+      closeIconPicker();
+    });
+  });
+
+  updateIconPickThumb('left');
+  updateIconPickThumb('right');
+
+  document.getElementById('startBtn').addEventListener('click', function(){
+    ensureAudio(); sndClick();
+    tryFullscreen();
+    startGame();
+  });
+
+  document.getElementById('pauseBtn').addEventListener('click', function(){
+    if (state !== STATE_PLAY) return;
+    state = STATE_PAUSE;
+    show('pause');
+  });
+  document.getElementById('resumeBtn').addEventListener('click', function(){
+    state = STATE_PLAY;
+    show('play');
+    lastT = performance.now();
+    requestAnimationFrame(loop);
+  });
+  document.getElementById('quitBtn').addEventListener('click', function(){
+    state = STATE_MENU;
+    touchMap = {};
+    lastTouchClientPos.left = null; lastTouchClientPos.right = null;
+    show('settings');
+  });
+  document.getElementById('rematchBtn').addEventListener('click', function(){
+    startGame();
+  });
+  document.getElementById('menuBtn').addEventListener('click', function(){
+    state = STATE_MENU;
+    touchMap = {};
+    lastTouchClientPos.left = null; lastTouchClientPos.right = null;
+    show('settings');
+  });
+
+  // prevent iOS bounce/scroll everywhere
+  document.addEventListener('touchmove', function(e){
+    if (state === STATE_PLAY) e.preventDefault();
+  }, {passive:false});
+  document.addEventListener('gesturestart', function(e){ e.preventDefault(); });
+
+  // iOS can suspend the AudioContext whenever the tab is backgrounded
+  // (app switch, screen lock, Safari tab switch) — resume it on return.
+  document.addEventListener('visibilitychange', function(){
+    if (!document.hidden && actx && actx.state === 'suspended'){
+      actx.resume();
+    }
+  });
+
+  // init
+  setMode(settings.mode); // populate the settings screen's mode label up front
+  resize();
+  render();
+})();
+</script>
+</body>
+</html>
