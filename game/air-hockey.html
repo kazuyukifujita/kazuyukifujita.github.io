@@ -69,6 +69,21 @@
   #menu button{ padding:9px 15px; font-size:13px; }
   #menu button.primary{ padding:12px 30px; font-size:16px; margin-top:2px; }
 
+  /* Short viewports (most phones in portrait) — compact the settings
+     screen further so the start button never requires scrolling to reach. */
+  @media (max-height:700px){
+    #menu .panel{
+      gap:7px;
+      padding:calc(8px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom));
+    }
+    #menu .group{ gap:3px; }
+    #menu .row{ gap:6px; }
+    #menu button{ padding:6px 12px; font-size:11.5px; }
+    #menu button.primary{ padding:9px 24px; font-size:14px; }
+    #menu .player-col{ padding:6px 6px; gap:4px; }
+    #menu .icon-pick-thumb{ width:48px; height:48px; font-size:24px; }
+  }
+
   .title{
     font-size:clamp(28px,6vw,48px);
     font-weight:800; margin:0 0 6px 0; text-align:center;
@@ -128,8 +143,8 @@
   .mini-label{
     font-size:10px; color:#9fe8ff; opacity:0.7; letter-spacing:1px; margin-top:2px;
   }
-  .mini-row{ gap:6px; }
-  .mini-row button{ padding:7px 11px; font-size:12px; }
+  .mini-row{ gap:6px; flex-wrap:nowrap; }
+  .mini-row button{ padding:7px 6px; font-size:12px; flex:1 1 0; min-width:0; }
   .goal-block{ opacity:0.3; pointer-events:none; } /* dimmed by default (CPU mode); enabled in 2P mode */
 
   .icon-pick-btn{
@@ -137,27 +152,26 @@
     background:transparent; border:none; box-shadow:none; padding:6px;
   }
   .icon-pick-thumb{
-    width:64px; height:64px; border-radius:50%; overflow:hidden;
+    width:64px; height:64px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
     background:#0c0c1a; border:2px solid rgba(255,255,255,0.35);
-    font-size:20px; color:#889;
+    font-size:32px; line-height:1; color:#889;
   }
-  .icon-pick-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .icon-pick-label{ font-size:12px; color:#8fe8ff; opacity:0.9; }
 
   .icon-choice-btn{
-    width:76px; height:76px; padding:0; border-radius:50%;
-    overflow:hidden; background:#0c0c1a;
+    width:64px; height:64px; padding:0; border-radius:50%;
+    background:#0c0c1a;
     border:2px solid rgba(255,255,255,0.3);
     box-shadow:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:32px; line-height:1;
   }
-  .icon-choice-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
   .icon-choice-btn.selected{
     border-color:#fff;
     box-shadow:0 0 10px rgba(255,255,255,0.7), 0 0 18px rgba(255,255,255,0.4);
   }
   .icon-choice-btn.none-btn{
-    display:flex; align-items:center; justify-content:center;
     font-size:22px; color:#889;
   }
 
@@ -217,7 +231,24 @@
     font-size:18px; display:flex; align-items:center; justify-content:center;
   }
 
-  .end-title{ font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center; }
+  .end-title{
+    font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center;
+    animation: winTitlePulse 1.3s ease-in-out infinite;
+  }
+  @keyframes winTitlePulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.09); }
+  }
+  #endOverlay{ overflow:hidden; }
+  .confetti{
+    position:absolute; top:-8%; width:9px; height:15px;
+    border-radius:2px; opacity:0.95; pointer-events:none;
+    animation-name:confettiFall; animation-timing-function:linear; animation-iteration-count:1;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(120vh) rotate(760deg); opacity:0.25; }
+  }
 
   #goalFlash{
     position:absolute; inset:0; z-index:8; pointer-events:none;
@@ -286,8 +317,7 @@
   <div id="menu" class="overlay hidden">
     <div class="panel">
       <button id="backToTitleBtn" class="ghost" style="align-self:flex-start; font-size:12px; padding:7px 14px;">← モード選択に戻る</button>
-      <div class="title" style="font-size:clamp(22px,5vw,30px); margin-bottom:0;">NEON AIR HOCKEY</div>
-      <div class="subtitle" id="settingsModeLabel" style="margin-top:-6px;"></div>
+      <div class="subtitle" id="settingsModeLabel" style="margin-top:2px;"></div>
 
       <div class="group" id="diffGroup">
         <div class="group-label">CPUの強さ</div>
@@ -361,14 +391,6 @@
         </div>
       </div>
 
-      <div class="group">
-        <div class="group-label">サウンド</div>
-        <div class="row">
-          <button id="soundOn" class="sound-btn selected" data-sound="on">ON</button>
-          <button id="soundOff" class="sound-btn" data-sound="off">OFF</button>
-        </div>
-      </div>
-
       <button id="startBtn" class="primary" style="margin-top:8px;">ゲーム開始</button>
     </div>
   </div>
@@ -379,12 +401,18 @@
   <div id="iconPickerOverlay" class="overlay hidden">
     <div class="panel">
       <div class="title" style="font-size:24px;" id="iconPickerTitle">アイコンを選択</div>
-      <div class="row" style="max-width:420px;">
+      <div class="row" style="max-width:480px;">
         <button class="icon-choice-btn none-btn selected" data-icon="none">✕</button>
-        <button class="icon-choice-btn" data-icon="dad"><img src="icons/dad.png" alt=""></button>
-        <button class="icon-choice-btn" data-icon="girl"><img src="icons/girl.png" alt=""></button>
-        <button class="icon-choice-btn" data-icon="baby"><img src="icons/baby.png" alt=""></button>
-        <button class="icon-choice-btn" data-icon="mom"><img src="icons/mom.png" alt=""></button>
+        <button class="icon-choice-btn" data-icon="grin">😀</button>
+        <button class="icon-choice-btn" data-icon="cool">😎</button>
+        <button class="icon-choice-btn" data-icon="ninja">🥷</button>
+        <button class="icon-choice-btn" data-icon="robot">🤖</button>
+        <button class="icon-choice-btn" data-icon="alien">👽</button>
+        <button class="icon-choice-btn" data-icon="cat">🐱</button>
+        <button class="icon-choice-btn" data-icon="dog">🐶</button>
+        <button class="icon-choice-btn" data-icon="lion">🦁</button>
+        <button class="icon-choice-btn" data-icon="panda">🐼</button>
+        <button class="icon-choice-btn" data-icon="fox">🦊</button>
       </div>
       <button id="iconPickerClose" class="ghost" style="margin-top:8px;">閉じる</button>
     </div>
@@ -536,20 +564,19 @@
     goalSizeRight: 'normal',
     malletSizeLeft: 'normal', // 'small' | 'normal' | 'large' — per player, any mode
     malletSizeRight: 'normal',
-    iconLeft: 'none',   // 'none' | 'dad' | 'girl' | 'baby' | 'mom'
+    iconLeft: 'none',   // 'none' | one of ICON_EMOJI's keys
     iconRight: 'none',
     itemFrequency: 'mid' // 'off' | 'low' | 'mid' | 'high' — 'mid' is the original baseline rate
   };
 
-  var ICON_SRC = { dad:'icons/dad.png', girl:'icons/girl.png', baby:'icons/baby.png', mom:'icons/mom.png' };
-  var ICON_IMAGES = {};
-  Object.keys(ICON_SRC).forEach(function(k){
-    var im = new Image();
-    im.src = ICON_SRC[k];
-    ICON_IMAGES[k] = im;
-  });
-  function getIconImg(key){
-    return (key && key !== 'none' && ICON_IMAGES[key]) ? ICON_IMAGES[key] : null;
+  // Unicode emoji face options for each mallet — no image assets needed,
+  // and they render/rotate trivially via ctx.fillText (see drawMallet).
+  var ICON_EMOJI = {
+    grin:'😀', cool:'😎', ninja:'🥷', robot:'🤖', alien:'👽',
+    cat:'🐱', dog:'🐶', lion:'🦁', panda:'🐼', fox:'🦊'
+  };
+  function getIconEmoji(key){
+    return (key && key !== 'none' && ICON_EMOJI[key]) ? ICON_EMOJI[key] : null;
   }
 
   // All speed/distance figures below (maxSpeed, error, drift, etc.) were
@@ -737,7 +764,27 @@
   }
   function sndWall(){ blip(320,0.08,'triangle',0.12); }
   function sndHit(spd){ blip(180+Math.min(spd,20)*20,0.09,'square',0.16); }
-  function sndGoal(){ blip(660,0.35,'sawtooth',0.22); setTimeout(function(){blip(880,0.3,'sawtooth',0.18);},90); }
+  function sndGoal(){
+    // a short rising arpeggio with a bright sparkle on top, instead of a
+    // plain two-note blip — meant to feel like a proper "score!" moment.
+    blip(392,0.16,'square',0.22);
+    setTimeout(function(){ blip(523,0.16,'square',0.22); },70);
+    setTimeout(function(){ blip(659,0.18,'square',0.24); },140);
+    setTimeout(function(){ blip(784,0.35,'sawtooth',0.26); },210);
+    setTimeout(function(){ blip(1047,0.3,'sine',0.18); },230);
+  }
+  function sndWin(){
+    // triumphant rising run followed by a held three-note chord
+    var notes = [523,659,784,1047];
+    notes.forEach(function(f,i){
+      setTimeout(function(){ blip(f,0.22,'square',0.24); }, i*110);
+    });
+    setTimeout(function(){
+      blip(784,0.6,'sawtooth',0.22);
+      blip(988,0.6,'sawtooth',0.2);
+      blip(1319,0.6,'sine',0.18);
+    }, notes.length*110 + 60);
+  }
   function sndClick(){ blip(500,0.05,'sine',0.1); }
   function sndItemGet(){ blip(700,0.1,'sine',0.16); setTimeout(function(){blip(980,0.12,'sine',0.15);},70); }
   function sndItemUse(){ blip(1300,0.16,'sawtooth',0.22); }
@@ -1406,6 +1453,35 @@
     document.getElementById('endTitle').textContent = winner + ' WINS';
     document.getElementById('endScore').textContent = score.left + ' - ' + score.right;
     show('end');
+    sndWin();
+    spawnConfetti();
+  }
+
+  // A burst of falling confetti pieces for the win screen — plain DOM divs
+  // animated with CSS (see .confetti/@keyframes confettiFall), cleaned up
+  // automatically once each piece finishes falling so a rematch doesn't
+  // pile up stale nodes.
+  function spawnConfetti(){
+    var layer = document.getElementById('endOverlay');
+    layer.querySelectorAll('.confetti').forEach(function(el){ el.remove(); });
+    var colors = ['#00f6ff','#ff2bd6','#ffe100','#4ade80','#8b5cf6'];
+    var count = 46;
+    for (var i=0;i<count;i++){
+      var el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = (Math.random()*100) + '%';
+      el.style.background = colors[i % colors.length];
+      el.style.width = (6 + Math.random()*6) + 'px';
+      el.style.height = (10 + Math.random()*8) + 'px';
+      var dur = 2.0 + Math.random()*1.8;
+      var delay = Math.random()*0.5;
+      el.style.animationDuration = dur + 's';
+      el.style.animationDelay = delay + 's';
+      layer.appendChild(el);
+      (function(node, life){
+        setTimeout(function(){ node.remove(); }, life);
+      })(el, (dur+delay)*1000 + 200);
+    }
   }
 
   /* ---------------------------------------------------------
@@ -1513,27 +1589,15 @@
     ctx.closePath();
   }
 
-  function drawMallet(m, color, iconImg, rotation){
-    var hasIcon = iconImg && iconImg.complete && iconImg.naturalWidth > 0;
+  function drawMallet(m, color, iconEmoji, rotation){
+    var hasIcon = !!iconEmoji;
     rotation = rotation || 0;
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
-
-    if (hasIcon){
-      ctx.save();
-      ctx.clip();
-      // rotated per-side so the photo faces whoever is standing at that
-      // edge of the flat-lying iPad (see rotation values passed by render()).
-      ctx.translate(m.x, m.y);
-      ctx.rotate(rotation);
-      ctx.drawImage(iconImg, -m.r, -m.r, m.r*2, m.r*2);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = 'rgba(6,6,24,0.9)';
-      ctx.fill();
-    }
+    ctx.fillStyle = 'rgba(6,6,24,0.9)';
+    ctx.fill();
 
     ctx.strokeStyle = color;
     ctx.shadowColor = color;
@@ -1541,7 +1605,18 @@
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    if (!hasIcon){
+    if (hasIcon){
+      // rotated per-side so the emoji faces whoever is standing at that
+      // edge of the flat-lying iPad (see rotation values passed by render()).
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(rotation);
+      ctx.font = Math.round(m.r*1.35) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(iconEmoji, 0, Math.round(m.r*0.06));
+      ctx.restore();
+    } else {
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.r*0.4, 0, Math.PI*2);
       ctx.strokeStyle = color;
@@ -1660,8 +1735,8 @@
     // rotated to face them — left rotates 90° clockwise, right rotates 90°
     // counter-clockwise. (On phones this composes with the 90° scene
     // rotation above and still works out correctly for each side.)
-    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), Math.PI/2);
-    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), -Math.PI/2);
+    drawMallet(mallet.left, '#00f6ff', getIconEmoji(settings.iconLeft), Math.PI/2);
+    drawMallet(mallet.right, '#ff2bd6', getIconEmoji(settings.iconRight), -Math.PI/2);
     drawPuck();
 
     ctx.restore();
@@ -1769,7 +1844,9 @@
   selectGroup('.malletR-btn', 'mallet', null, function(v){ settings.malletSizeRight = v; });
   selectGroup('.freq-btn', 'freq', null, function(v){ settings.itemFrequency = v; });
   selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
-  selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
+  // sound is always on now — the settings UI toggle was removed to keep the
+  // (phone) settings screen short enough that the start button never needs
+  // scrolling to reach; settings.sound defaults to true above.
 
   /* ---------------------------------------------------------
      FULLSCREEN
@@ -1802,11 +1879,7 @@
   function updateIconPickThumb(side){
     var key = side === 'left' ? settings.iconLeft : settings.iconRight;
     var thumbEl = document.getElementById(side === 'left' ? 'iconPickThumbL' : 'iconPickThumbR');
-    if (key && key !== 'none' && ICON_SRC[key]){
-      thumbEl.innerHTML = '<img src="'+ICON_SRC[key]+'" alt="">';
-    } else {
-      thumbEl.textContent = '✕';
-    }
+    thumbEl.textContent = getIconEmoji(key) || '✕';
   }
 
   function openIconPicker(side){
