@@ -231,6 +231,32 @@
     font-size:18px; display:flex; align-items:center; justify-content:center;
   }
 
+  /* Phone top/bottom split (useRotatedLayout): P1 physically sits at the
+     BOTTOM of the screen and P2/CPU at the TOP, so their score readouts are
+     split apart to sit near each one's own side instead of both being
+     crammed into a single bar at the physical top (which is what the
+     tablet/landscape layout above does, and still does — untouched). Text
+     stays fully horizontal/readable; only position changes. */
+  #hud.hud-rotated{
+    bottom:0; /* stretch the (invisible) hud box to the full screen height
+                 so the P1 readout can be anchored near the bottom */
+  }
+  #hud.hud-rotated #scoreWrapLeft{
+    position:absolute; left:18px; top:auto;
+    bottom:calc(14px + env(safe-area-inset-bottom));
+  }
+  #hud.hud-rotated #scoreWrapRight{
+    /* top-LEFT (not top-right) per user preference — keeps the CPU/P2 score
+       out of the way of the pause button's usual corner */
+    position:absolute; left:18px; right:auto;
+    top:calc(10px + env(safe-area-inset-top));
+  }
+  #hud.hud-rotated #targetInfo{
+    position:absolute;
+    left:calc(14px + env(safe-area-inset-left));
+    top:50%; transform:translateY(-50%);
+  }
+
   .end-title{
     font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center;
     animation: winTitlePulse 1.3s ease-in-out infinite;
@@ -264,7 +290,7 @@
   #goalFlash .flashText{
     position:relative;
     font-size:clamp(48px,13vw,130px); font-weight:900; letter-spacing:6px;
-    color:#fff;
+    color:#fff; text-align:center;
     animation: goalPop 1.2s ease forwards;
   }
   @keyframes bgFlashAnim{
@@ -285,14 +311,14 @@
   <canvas id="game"></canvas>
 
   <div id="hud" class="hidden">
-    <div class="score-wrap">
+    <div class="score-wrap" id="scoreWrapLeft">
       <div>
         <div class="score-tag" id="tagLeft">PLAYER 1</div>
         <div class="score left" id="scoreLeft">0</div>
       </div>
     </div>
     <div id="targetInfo"></div>
-    <div class="score-wrap">
+    <div class="score-wrap" id="scoreWrapRight">
       <div>
         <div class="score-tag" id="tagRight">PLAYER 2</div>
         <div class="score right" id="scoreRight">0</div>
@@ -473,6 +499,10 @@
     useRotatedLayout = isPhoneSize() && (W < H);
     VW = useRotatedLayout ? H : W;
     VH = useRotatedLayout ? W : H;
+    // In the phone top/bottom split, split the HUD's score readouts apart
+    // to sit near each player's actual physical side (see #hud.hud-rotated
+    // in the CSS) instead of both being crammed into one bar at the top.
+    document.getElementById('hud').classList.toggle('hud-rotated', useRotatedLayout);
     layoutField();
   }
   window.addEventListener('resize', resize);
@@ -481,6 +511,29 @@
   /* ---------------------------------------------------------
      FIELD GEOMETRY
   --------------------------------------------------------- */
+  // Reads the CSS env(safe-area-inset-*) values (the notch / Dynamic Island /
+  // home-indicator margins on iPhone) in real px. JS can't read env()
+  // directly, so a throwaway element with matching padding is used as a
+  // probe — a standard trick for this.
+  var safeAreaProbe = null;
+  function getSafeAreaInsets(){
+    if (!safeAreaProbe){
+      safeAreaProbe = document.createElement('div');
+      safeAreaProbe.style.cssText =
+        'position:fixed; left:0; top:0; width:0; height:0; pointer-events:none; visibility:hidden;' +
+        'padding-top:env(safe-area-inset-top,0px); padding-right:env(safe-area-inset-right,0px);' +
+        'padding-bottom:env(safe-area-inset-bottom,0px); padding-left:env(safe-area-inset-left,0px);';
+      document.body.appendChild(safeAreaProbe);
+    }
+    var cs = getComputedStyle(safeAreaProbe);
+    return {
+      top: parseFloat(cs.paddingTop) || 0,
+      right: parseFloat(cs.paddingRight) || 0,
+      bottom: parseFloat(cs.paddingBottom) || 0,
+      left: parseFloat(cs.paddingLeft) || 0
+    };
+  }
+
   var field = {};
   function layoutField(){
     var margin = Math.min(VW,VH) * 0.03;
@@ -488,6 +541,23 @@
     field.right = VW - margin;
     field.top = margin + 10;
     field.bottom = VH - margin;
+
+    // Keep the court clear of the iPhone notch/Dynamic Island and home
+    // indicator. In the phone portrait (rotated) layout, the physical TOP of
+    // the screen (where the island sits) corresponds to the virtual RIGHT
+    // edge of the field, and the physical BOTTOM (home indicator) to the
+    // virtual LEFT edge — see toVirtualXY()'s inverse mapping. In the normal
+    // (non-rotated) layout, physical and virtual axes line up directly.
+    var insets = getSafeAreaInsets();
+    if (useRotatedLayout){
+      field.right -= insets.top;
+      field.left += insets.bottom;
+    } else {
+      field.top += insets.top;
+      field.left += insets.left;
+      field.right -= insets.right;
+    }
+
     field.midX = (field.left + field.right) / 2;
     field.w = field.right - field.left;
     field.h = field.bottom - field.top;
@@ -662,8 +732,15 @@
   var score = { left:0, right:0 };
 
   var mallet = {
-    left:  { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 },
-    right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 }
+    // speedArmed/curveArmed/giantArmed: the buff has been picked up but is
+    // waiting for this mallet's first puck contact before its *Until timer
+    // actually starts counting down (see tryPickupItem/resolveMalletCollision).
+    left:  { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null,
+              speedUntil:0, curveBuffUntil:0, giantUntil:0,
+              speedArmed:false, curveArmed:false, giantArmed:false },
+    right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null,
+              speedUntil:0, curveBuffUntil:0, giantUntil:0,
+              speedArmed:false, curveArmed:false, giantArmed:false }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
   // Last known finger position per side (in canvas coordinates), tracked
@@ -849,15 +926,16 @@
     var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
       if (fieldItem.type === 'speed'){
-        // 'speed', 'curve' and 'giant' all power up the mallet itself the
-        // instant they're picked up — the effect applies continuously (or
-        // on every hit) for the buff window, rather than being a single
-        // pending charge consumed on the next hit like 'ghost' is.
-        m.speedUntil = now + ITEM_SPEED_BUFF_MS;
+        // 'speed', 'curve' and 'giant' all power up the mallet itself, but
+        // the buff window doesn't start counting down until this mallet
+        // actually touches the puck for the first time after pickup — being
+        // picked up just "arms" it (see resolveMalletCollision for where the
+        // *Until timer actually gets started).
+        m.speedArmed = true;
       } else if (fieldItem.type === 'curve'){
-        m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS;
+        m.curveArmed = true;
       } else if (fieldItem.type === 'giant'){
-        m.giantUntil = now + ITEM_GIANT_BUFF_MS;
+        m.giantArmed = true;
       } else {
         m.item = fieldItem.type;
       }
@@ -880,9 +958,11 @@
   function getActiveMalletBuffs(m, now){
     var types = [];
     if (m.item) types.push(m.item); // pending 'ghost' charge
-    if (m.speedUntil && now < m.speedUntil) types.push('speed');
-    if (m.curveBuffUntil && now < m.curveBuffUntil) types.push('curve');
-    if (m.giantUntil && now < m.giantUntil) types.push('giant');
+    // armed-but-not-yet-touched buffs still show their ring, same as a
+    // pending 'ghost' charge does, so the player can see they're holding it
+    if (m.speedArmed || (m.speedUntil && now < m.speedUntil)) types.push('speed');
+    if (m.curveArmed || (m.curveBuffUntil && now < m.curveBuffUntil)) types.push('curve');
+    if (m.giantArmed || (m.giantUntil && now < m.giantUntil)) types.push('giant');
     return types;
   }
 
@@ -970,6 +1050,12 @@
     mallet.right.curveBuffUntil = 0;
     mallet.left.giantUntil = 0;
     mallet.right.giantUntil = 0;
+    mallet.left.speedArmed = false;
+    mallet.right.speedArmed = false;
+    mallet.left.curveArmed = false;
+    mallet.right.curveArmed = false;
+    mallet.left.giantArmed = false;
+    mallet.right.giantArmed = false;
     mallet.left.r = mallet.left.baseR;
     mallet.right.r = mallet.right.baseR;
     itemSpawnAt = performance.now() + randRange(3300, 5800) * itemFreqMult(); // 1.2x baseline frequency
@@ -1253,9 +1339,20 @@
       sndHit(spd);
       ghostContactFlash();
 
+      var now = performance.now();
+
+      // Arm-on-first-touch: 'speed'/'curve'/'giant' are picked up "charged"
+      // but their buff window only actually starts counting down from this
+      // mallet's first puck contact after pickup, not from the moment of
+      // pickup — so if this hit is the one that triggers it, start the timer
+      // now (which also means THIS hit already gets the boosted effect,
+      // since it falls inside the window that just began).
+      if (m.speedArmed){ m.speedArmed = false; m.speedUntil = now + ITEM_SPEED_BUFF_MS; }
+      if (m.curveArmed){ m.curveArmed = false; m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS; }
+      if (m.giantArmed){ m.giantArmed = false; m.giantUntil = now + ITEM_GIANT_BUFF_MS; }
+
       // 'speed' item: while the buff is active, every hit fires a
       // super-speed shot (this can push past the normal maxSpeed cap)
-      var now = performance.now();
       if (m.speedUntil && now < m.speedUntil){
         var spd2 = Math.hypot(puck.vx, puck.vy) || 1;
         puck.vx = puck.vx / spd2 * ITEM_SPEED_BOOST;
