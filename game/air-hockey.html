@@ -69,6 +69,21 @@
   #menu button{ padding:9px 15px; font-size:13px; }
   #menu button.primary{ padding:12px 30px; font-size:16px; margin-top:2px; }
 
+  /* Short viewports (most phones in portrait) — compact the settings
+     screen further so the start button never requires scrolling to reach. */
+  @media (max-height:700px){
+    #menu .panel{
+      gap:7px;
+      padding:calc(8px + env(safe-area-inset-top)) 16px calc(10px + env(safe-area-inset-bottom));
+    }
+    #menu .group{ gap:3px; }
+    #menu .row{ gap:6px; }
+    #menu button{ padding:6px 12px; font-size:11.5px; }
+    #menu button.primary{ padding:9px 24px; font-size:14px; }
+    #menu .player-col{ padding:6px 6px; gap:4px; }
+    #menu .icon-pick-thumb{ width:48px; height:48px; font-size:24px; }
+  }
+
   .title{
     font-size:clamp(28px,6vw,48px);
     font-weight:800; margin:0 0 6px 0; text-align:center;
@@ -128,8 +143,8 @@
   .mini-label{
     font-size:10px; color:#9fe8ff; opacity:0.7; letter-spacing:1px; margin-top:2px;
   }
-  .mini-row{ gap:6px; }
-  .mini-row button{ padding:7px 11px; font-size:12px; }
+  .mini-row{ gap:6px; flex-wrap:nowrap; }
+  .mini-row button{ padding:7px 6px; font-size:12px; flex:1 1 0; min-width:0; }
   .goal-block{ opacity:0.3; pointer-events:none; } /* dimmed by default (CPU mode); enabled in 2P mode */
 
   .icon-pick-btn{
@@ -137,27 +152,26 @@
     background:transparent; border:none; box-shadow:none; padding:6px;
   }
   .icon-pick-thumb{
-    width:64px; height:64px; border-radius:50%; overflow:hidden;
+    width:64px; height:64px; border-radius:50%;
     display:flex; align-items:center; justify-content:center;
     background:#0c0c1a; border:2px solid rgba(255,255,255,0.35);
-    font-size:20px; color:#889;
+    font-size:32px; line-height:1; color:#889;
   }
-  .icon-pick-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .icon-pick-label{ font-size:12px; color:#8fe8ff; opacity:0.9; }
 
   .icon-choice-btn{
-    width:76px; height:76px; padding:0; border-radius:50%;
-    overflow:hidden; background:#0c0c1a;
+    width:64px; height:64px; padding:0; border-radius:50%;
+    background:#0c0c1a;
     border:2px solid rgba(255,255,255,0.3);
     box-shadow:none;
+    display:flex; align-items:center; justify-content:center;
+    font-size:32px; line-height:1;
   }
-  .icon-choice-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
   .icon-choice-btn.selected{
     border-color:#fff;
     box-shadow:0 0 10px rgba(255,255,255,0.7), 0 0 18px rgba(255,255,255,0.4);
   }
   .icon-choice-btn.none-btn{
-    display:flex; align-items:center; justify-content:center;
     font-size:22px; color:#889;
   }
 
@@ -217,7 +231,60 @@
     font-size:18px; display:flex; align-items:center; justify-content:center;
   }
 
-  .end-title{ font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center; }
+  /* Phone top/bottom split (useRotatedLayout): P1 physically sits at the
+     BOTTOM of the screen and P2/CPU at the TOP, so their score readouts are
+     split apart to sit near each one's own side instead of both being
+     crammed into a single bar at the physical top (which is what the
+     tablet/landscape layout above does, and still does — untouched). Text
+     stays fully horizontal/readable; only position changes. */
+  #hud.hud-rotated{
+    bottom:0; /* stretch the (invisible) hud box to the full screen height
+                 so the P1 readout can be anchored near the bottom */
+  }
+  #hud.hud-rotated #scoreWrapLeft{
+    /* nudged right slightly so it doesn't sit right on top of the court's
+       border line */
+    position:absolute; left:26px; top:auto;
+    bottom:calc(14px + env(safe-area-inset-bottom));
+  }
+  #hud.hud-rotated #scoreWrapRight{
+    /* top-LEFT (not top-right) per user preference — nudged right+down a
+       little so it clears the court border too */
+    position:absolute; left:26px; right:auto;
+    top:calc(18px + env(safe-area-inset-top));
+  }
+  #hud.hud-rotated #targetInfo{
+    position:absolute;
+    left:calc(34px + env(safe-area-inset-left));
+    top:50%; transform:translateY(-50%);
+    color:#5c6b82; opacity:0.6; /* less eye-catching than the tablet layout's */
+  }
+  #hud.hud-rotated #pauseBtn{
+    /* escape the (now top-left) score-wrap it's nested in and go back to
+       its usual top-right corner, fixed relative to the viewport */
+    position:fixed;
+    top:calc(10px + env(safe-area-inset-top));
+    right:18px;
+  }
+
+  .end-title{
+    font-size:clamp(26px,6vw,44px); font-weight:800; text-align:center;
+    animation: winTitlePulse 1.3s ease-in-out infinite;
+  }
+  @keyframes winTitlePulse{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.09); }
+  }
+  #endOverlay{ overflow:hidden; }
+  .confetti{
+    position:absolute; top:-8%; width:9px; height:15px;
+    border-radius:2px; opacity:0.95; pointer-events:none;
+    animation-name:confettiFall; animation-timing-function:linear; animation-iteration-count:1;
+  }
+  @keyframes confettiFall{
+    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
+    100%{ transform:translateY(120vh) rotate(760deg); opacity:0.25; }
+  }
 
   #goalFlash{
     position:absolute; inset:0; z-index:8; pointer-events:none;
@@ -233,7 +300,7 @@
   #goalFlash .flashText{
     position:relative;
     font-size:clamp(48px,13vw,130px); font-weight:900; letter-spacing:6px;
-    color:#fff;
+    color:#fff; text-align:center;
     animation: goalPop 1.2s ease forwards;
   }
   @keyframes bgFlashAnim{
@@ -254,14 +321,14 @@
   <canvas id="game"></canvas>
 
   <div id="hud" class="hidden">
-    <div class="score-wrap">
+    <div class="score-wrap" id="scoreWrapLeft">
       <div>
         <div class="score-tag" id="tagLeft">PLAYER 1</div>
         <div class="score left" id="scoreLeft">0</div>
       </div>
     </div>
     <div id="targetInfo"></div>
-    <div class="score-wrap">
+    <div class="score-wrap" id="scoreWrapRight">
       <div>
         <div class="score-tag" id="tagRight">PLAYER 2</div>
         <div class="score right" id="scoreRight">0</div>
@@ -274,7 +341,6 @@
   <div id="titleScreen" class="overlay">
     <div class="panel">
       <div class="title title-huge">NEON<br>AIR HOCKEY</div>
-      <div class="subtitle">iPadを横向きにして、2本指(またはお2人)でどうぞ</div>
       <div class="row" style="margin-top:18px;">
         <button id="titleModeCpu" class="mode-btn primary title-mode-btn selected" data-mode="cpu">CPU対戦</button>
         <button id="titleMode2p" class="mode-btn primary title-mode-btn" data-mode="2p">2人対戦</button>
@@ -286,8 +352,7 @@
   <div id="menu" class="overlay hidden">
     <div class="panel">
       <button id="backToTitleBtn" class="ghost" style="align-self:flex-start; font-size:12px; padding:7px 14px;">← モード選択に戻る</button>
-      <div class="title" style="font-size:clamp(22px,5vw,30px); margin-bottom:0;">NEON AIR HOCKEY</div>
-      <div class="subtitle" id="settingsModeLabel" style="margin-top:-6px;"></div>
+      <div class="subtitle" id="settingsModeLabel" style="margin-top:2px;"></div>
 
       <div class="group" id="diffGroup">
         <div class="group-label">CPUの強さ</div>
@@ -361,14 +426,6 @@
         </div>
       </div>
 
-      <div class="group">
-        <div class="group-label">サウンド</div>
-        <div class="row">
-          <button id="soundOn" class="sound-btn selected" data-sound="on">ON</button>
-          <button id="soundOff" class="sound-btn" data-sound="off">OFF</button>
-        </div>
-      </div>
-
       <button id="startBtn" class="primary" style="margin-top:8px;">ゲーム開始</button>
     </div>
   </div>
@@ -379,12 +436,18 @@
   <div id="iconPickerOverlay" class="overlay hidden">
     <div class="panel">
       <div class="title" style="font-size:24px;" id="iconPickerTitle">アイコンを選択</div>
-      <div class="row" style="max-width:420px;">
+      <div class="row" style="max-width:480px;">
         <button class="icon-choice-btn none-btn selected" data-icon="none">✕</button>
-        <button class="icon-choice-btn" data-icon="dad"><img src="icons/dad.png" alt=""></button>
-        <button class="icon-choice-btn" data-icon="girl"><img src="icons/girl.png" alt=""></button>
-        <button class="icon-choice-btn" data-icon="baby"><img src="icons/baby.png" alt=""></button>
-        <button class="icon-choice-btn" data-icon="mom"><img src="icons/mom.png" alt=""></button>
+        <button class="icon-choice-btn" data-icon="grin">😀</button>
+        <button class="icon-choice-btn" data-icon="cool">😎</button>
+        <button class="icon-choice-btn" data-icon="ninja">🥷</button>
+        <button class="icon-choice-btn" data-icon="robot">🤖</button>
+        <button class="icon-choice-btn" data-icon="alien">👽</button>
+        <button class="icon-choice-btn" data-icon="cat">🐱</button>
+        <button class="icon-choice-btn" data-icon="dog">🐶</button>
+        <button class="icon-choice-btn" data-icon="lion">🦁</button>
+        <button class="icon-choice-btn" data-icon="panda">🐼</button>
+        <button class="icon-choice-btn" data-icon="fox">🦊</button>
       </div>
       <button id="iconPickerClose" class="ghost" style="margin-top:8px;">閉じる</button>
     </div>
@@ -445,7 +508,18 @@
     useRotatedLayout = isPhoneSize() && (W < H);
     VW = useRotatedLayout ? H : W;
     VH = useRotatedLayout ? W : H;
+    // In the phone top/bottom split, split the HUD's score readouts apart
+    // to sit near each player's actual physical side (see #hud.hud-rotated
+    // in the CSS) instead of both being crammed into one bar at the top.
+    document.getElementById('hud').classList.toggle('hud-rotated', useRotatedLayout);
+    updateTargetInfoText();
     layoutField();
+  }
+
+  function updateTargetInfoText(){
+    var el = document.getElementById('targetInfo');
+    if (!el) return;
+    el.textContent = settings.target + '-point to win';
   }
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', function(){ setTimeout(resize, 250); });
@@ -453,6 +527,29 @@
   /* ---------------------------------------------------------
      FIELD GEOMETRY
   --------------------------------------------------------- */
+  // Reads the CSS env(safe-area-inset-*) values (the notch / Dynamic Island /
+  // home-indicator margins on iPhone) in real px. JS can't read env()
+  // directly, so a throwaway element with matching padding is used as a
+  // probe — a standard trick for this.
+  var safeAreaProbe = null;
+  function getSafeAreaInsets(){
+    if (!safeAreaProbe){
+      safeAreaProbe = document.createElement('div');
+      safeAreaProbe.style.cssText =
+        'position:fixed; left:0; top:0; width:0; height:0; pointer-events:none; visibility:hidden;' +
+        'padding-top:env(safe-area-inset-top,0px); padding-right:env(safe-area-inset-right,0px);' +
+        'padding-bottom:env(safe-area-inset-bottom,0px); padding-left:env(safe-area-inset-left,0px);';
+      document.body.appendChild(safeAreaProbe);
+    }
+    var cs = getComputedStyle(safeAreaProbe);
+    return {
+      top: parseFloat(cs.paddingTop) || 0,
+      right: parseFloat(cs.paddingRight) || 0,
+      bottom: parseFloat(cs.paddingBottom) || 0,
+      left: parseFloat(cs.paddingLeft) || 0
+    };
+  }
+
   var field = {};
   function layoutField(){
     var margin = Math.min(VW,VH) * 0.03;
@@ -460,6 +557,28 @@
     field.right = VW - margin;
     field.top = margin + 10;
     field.bottom = VH - margin;
+
+    // Keep the court clear of the iPhone notch/Dynamic Island and home
+    // indicator. In the phone portrait (rotated) layout, the physical TOP of
+    // the screen (where the island sits) corresponds to the virtual RIGHT
+    // edge of the field, and the physical BOTTOM (home indicator) to the
+    // virtual LEFT edge — see toVirtualXY()'s inverse mapping. In the normal
+    // (non-rotated) layout, physical and virtual axes line up directly.
+    var insets = getSafeAreaInsets();
+    if (useRotatedLayout){
+      field.right -= insets.top;
+      // The physical BOTTOM of the phone (home-indicator side) had far more
+      // margin than it needed — the top edge keeps its normal margin (per
+      // user request, unchanged), but the bottom now only reserves the
+      // actual safe-area inset (if any) so the court stretches almost all
+      // the way down instead of matching the same margin as every other side.
+      field.left = insets.bottom + 4;
+    } else {
+      field.top += insets.top;
+      field.left += insets.left;
+      field.right -= insets.right;
+    }
+
     field.midX = (field.left + field.right) / 2;
     field.w = field.right - field.left;
     field.h = field.bottom - field.top;
@@ -475,7 +594,9 @@
     field.goalBottomRight = midY + field.goalHeightRight/2;
 
     var scale = Math.min(field.w, field.h);
-    var malletBaseR = scale * 0.073;
+    // Phone portrait only (not tablet/landscape): mallets read as a bit
+    // small on a small screen, so bump the base radius up ~1.3x there.
+    var malletBaseR = scale * 0.073 * (useRotatedLayout ? 1.3 : 1);
     var mlMul = MALLET_SIZE[settings.malletSizeLeft] || 1;
     var mrMul = MALLET_SIZE[settings.malletSizeRight] || 1;
     // baseR is the player's chosen size (small/normal/large); r is the
@@ -536,20 +657,19 @@
     goalSizeRight: 'normal',
     malletSizeLeft: 'normal', // 'small' | 'normal' | 'large' — per player, any mode
     malletSizeRight: 'normal',
-    iconLeft: 'none',   // 'none' | 'dad' | 'girl' | 'baby' | 'mom'
+    iconLeft: 'none',   // 'none' | one of ICON_EMOJI's keys
     iconRight: 'none',
     itemFrequency: 'mid' // 'off' | 'low' | 'mid' | 'high' — 'mid' is the original baseline rate
   };
 
-  var ICON_SRC = { dad:'icons/dad.png', girl:'icons/girl.png', baby:'icons/baby.png', mom:'icons/mom.png' };
-  var ICON_IMAGES = {};
-  Object.keys(ICON_SRC).forEach(function(k){
-    var im = new Image();
-    im.src = ICON_SRC[k];
-    ICON_IMAGES[k] = im;
-  });
-  function getIconImg(key){
-    return (key && key !== 'none' && ICON_IMAGES[key]) ? ICON_IMAGES[key] : null;
+  // Unicode emoji face options for each mallet — no image assets needed,
+  // and they render/rotate trivially via ctx.fillText (see drawMallet).
+  var ICON_EMOJI = {
+    grin:'😀', cool:'😎', ninja:'🥷', robot:'🤖', alien:'👽',
+    cat:'🐱', dog:'🐶', lion:'🦁', panda:'🐼', fox:'🦊'
+  };
+  function getIconEmoji(key){
+    return (key && key !== 'none' && ICON_EMOJI[key]) ? ICON_EMOJI[key] : null;
   }
 
   // All speed/distance figures below (maxSpeed, error, drift, etc.) were
@@ -635,8 +755,15 @@
   var score = { left:0, right:0 };
 
   var mallet = {
-    left:  { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 },
-    right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null, speedUntil:0, curveBuffUntil:0, giantUntil:0 }
+    // speedArmed/curveArmed/giantArmed: the buff has been picked up but is
+    // waiting for this mallet's first puck contact before its *Until timer
+    // actually starts counting down (see tryPickupItem/resolveMalletCollision).
+    left:  { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null,
+              speedUntil:0, curveBuffUntil:0, giantUntil:0,
+              speedArmed:false, curveArmed:false, giantArmed:false },
+    right: { x:0, y:0, vx:0, vy:0, r:40, baseR:40, active:false, item:null,
+              speedUntil:0, curveBuffUntil:0, giantUntil:0,
+              speedArmed:false, curveArmed:false, giantArmed:false }
   };
   var touchMap = {}; // touchId -> 'left' | 'right'
   // Last known finger position per side (in canvas coordinates), tracked
@@ -737,7 +864,27 @@
   }
   function sndWall(){ blip(320,0.08,'triangle',0.12); }
   function sndHit(spd){ blip(180+Math.min(spd,20)*20,0.09,'square',0.16); }
-  function sndGoal(){ blip(660,0.35,'sawtooth',0.22); setTimeout(function(){blip(880,0.3,'sawtooth',0.18);},90); }
+  function sndGoal(){
+    // a short rising arpeggio with a bright sparkle on top, instead of a
+    // plain two-note blip — meant to feel like a proper "score!" moment.
+    blip(392,0.16,'square',0.22);
+    setTimeout(function(){ blip(523,0.16,'square',0.22); },70);
+    setTimeout(function(){ blip(659,0.18,'square',0.24); },140);
+    setTimeout(function(){ blip(784,0.35,'sawtooth',0.26); },210);
+    setTimeout(function(){ blip(1047,0.3,'sine',0.18); },230);
+  }
+  function sndWin(){
+    // triumphant rising run followed by a held three-note chord
+    var notes = [523,659,784,1047];
+    notes.forEach(function(f,i){
+      setTimeout(function(){ blip(f,0.22,'square',0.24); }, i*110);
+    });
+    setTimeout(function(){
+      blip(784,0.6,'sawtooth',0.22);
+      blip(988,0.6,'sawtooth',0.2);
+      blip(1319,0.6,'sine',0.18);
+    }, notes.length*110 + 60);
+  }
   function sndClick(){ blip(500,0.05,'sine',0.1); }
   function sndItemGet(){ blip(700,0.1,'sine',0.16); setTimeout(function(){blip(980,0.12,'sine',0.15);},70); }
   function sndItemUse(){ blip(1300,0.16,'sawtooth',0.22); }
@@ -802,15 +949,16 @@
     var dx = fieldItem.x - m.x, dy = fieldItem.y - m.y;
     if (Math.hypot(dx,dy) < m.r + fieldItem.r){
       if (fieldItem.type === 'speed'){
-        // 'speed', 'curve' and 'giant' all power up the mallet itself the
-        // instant they're picked up — the effect applies continuously (or
-        // on every hit) for the buff window, rather than being a single
-        // pending charge consumed on the next hit like 'ghost' is.
-        m.speedUntil = now + ITEM_SPEED_BUFF_MS;
+        // 'speed', 'curve' and 'giant' all power up the mallet itself, but
+        // the buff window doesn't start counting down until this mallet
+        // actually touches the puck for the first time after pickup — being
+        // picked up just "arms" it (see resolveMalletCollision for where the
+        // *Until timer actually gets started).
+        m.speedArmed = true;
       } else if (fieldItem.type === 'curve'){
-        m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS;
+        m.curveArmed = true;
       } else if (fieldItem.type === 'giant'){
-        m.giantUntil = now + ITEM_GIANT_BUFF_MS;
+        m.giantArmed = true;
       } else {
         m.item = fieldItem.type;
       }
@@ -833,9 +981,11 @@
   function getActiveMalletBuffs(m, now){
     var types = [];
     if (m.item) types.push(m.item); // pending 'ghost' charge
-    if (m.speedUntil && now < m.speedUntil) types.push('speed');
-    if (m.curveBuffUntil && now < m.curveBuffUntil) types.push('curve');
-    if (m.giantUntil && now < m.giantUntil) types.push('giant');
+    // armed-but-not-yet-touched buffs still show their ring, same as a
+    // pending 'ghost' charge does, so the player can see they're holding it
+    if (m.speedArmed || (m.speedUntil && now < m.speedUntil)) types.push('speed');
+    if (m.curveArmed || (m.curveBuffUntil && now < m.curveBuffUntil)) types.push('curve');
+    if (m.giantArmed || (m.giantUntil && now < m.giantUntil)) types.push('giant');
     return types;
   }
 
@@ -909,8 +1059,7 @@
     updateScoreDisplay();
     document.getElementById('tagLeft').textContent = 'PLAYER 1';
     document.getElementById('tagRight').textContent = settings.mode==='cpu' ? 'CPU' : 'PLAYER 2';
-    document.getElementById('targetInfo').textContent = settings.target + '点先取';
-    resize();
+    resize(); // also (re)sets the target-info text — see updateTargetInfoText()
 
     // items only reset for a brand-new match (rematch/new game) — not
     // between points within the same match
@@ -923,6 +1072,12 @@
     mallet.right.curveBuffUntil = 0;
     mallet.left.giantUntil = 0;
     mallet.right.giantUntil = 0;
+    mallet.left.speedArmed = false;
+    mallet.right.speedArmed = false;
+    mallet.left.curveArmed = false;
+    mallet.right.curveArmed = false;
+    mallet.left.giantArmed = false;
+    mallet.right.giantArmed = false;
     mallet.left.r = mallet.left.baseR;
     mallet.right.r = mallet.right.baseR;
     itemSpawnAt = performance.now() + randRange(3300, 5800) * itemFreqMult(); // 1.2x baseline frequency
@@ -1206,9 +1361,20 @@
       sndHit(spd);
       ghostContactFlash();
 
+      var now = performance.now();
+
+      // Arm-on-first-touch: 'speed'/'curve'/'giant' are picked up "charged"
+      // but their buff window only actually starts counting down from this
+      // mallet's first puck contact after pickup, not from the moment of
+      // pickup — so if this hit is the one that triggers it, start the timer
+      // now (which also means THIS hit already gets the boosted effect,
+      // since it falls inside the window that just began).
+      if (m.speedArmed){ m.speedArmed = false; m.speedUntil = now + ITEM_SPEED_BUFF_MS; }
+      if (m.curveArmed){ m.curveArmed = false; m.curveBuffUntil = now + ITEM_CURVE_BUFF_MS; }
+      if (m.giantArmed){ m.giantArmed = false; m.giantUntil = now + ITEM_GIANT_BUFF_MS; }
+
       // 'speed' item: while the buff is active, every hit fires a
       // super-speed shot (this can push past the normal maxSpeed cap)
-      var now = performance.now();
       if (m.speedUntil && now < m.speedUntil){
         var spd2 = Math.hypot(puck.vx, puck.vy) || 1;
         puck.vx = puck.vx / spd2 * ITEM_SPEED_BOOST;
@@ -1406,6 +1572,35 @@
     document.getElementById('endTitle').textContent = winner + ' WINS';
     document.getElementById('endScore').textContent = score.left + ' - ' + score.right;
     show('end');
+    sndWin();
+    spawnConfetti();
+  }
+
+  // A burst of falling confetti pieces for the win screen — plain DOM divs
+  // animated with CSS (see .confetti/@keyframes confettiFall), cleaned up
+  // automatically once each piece finishes falling so a rematch doesn't
+  // pile up stale nodes.
+  function spawnConfetti(){
+    var layer = document.getElementById('endOverlay');
+    layer.querySelectorAll('.confetti').forEach(function(el){ el.remove(); });
+    var colors = ['#00f6ff','#ff2bd6','#ffe100','#4ade80','#8b5cf6'];
+    var count = 46;
+    for (var i=0;i<count;i++){
+      var el = document.createElement('div');
+      el.className = 'confetti';
+      el.style.left = (Math.random()*100) + '%';
+      el.style.background = colors[i % colors.length];
+      el.style.width = (6 + Math.random()*6) + 'px';
+      el.style.height = (10 + Math.random()*8) + 'px';
+      var dur = 2.0 + Math.random()*1.8;
+      var delay = Math.random()*0.5;
+      el.style.animationDuration = dur + 's';
+      el.style.animationDelay = delay + 's';
+      layer.appendChild(el);
+      (function(node, life){
+        setTimeout(function(){ node.remove(); }, life);
+      })(el, (dur+delay)*1000 + 200);
+    }
   }
 
   /* ---------------------------------------------------------
@@ -1513,27 +1708,15 @@
     ctx.closePath();
   }
 
-  function drawMallet(m, color, iconImg, rotation){
-    var hasIcon = iconImg && iconImg.complete && iconImg.naturalWidth > 0;
+  function drawMallet(m, color, iconEmoji, rotation){
+    var hasIcon = !!iconEmoji;
     rotation = rotation || 0;
 
     ctx.save();
     ctx.beginPath();
     ctx.arc(m.x, m.y, m.r, 0, Math.PI*2);
-
-    if (hasIcon){
-      ctx.save();
-      ctx.clip();
-      // rotated per-side so the photo faces whoever is standing at that
-      // edge of the flat-lying iPad (see rotation values passed by render()).
-      ctx.translate(m.x, m.y);
-      ctx.rotate(rotation);
-      ctx.drawImage(iconImg, -m.r, -m.r, m.r*2, m.r*2);
-      ctx.restore();
-    } else {
-      ctx.fillStyle = 'rgba(6,6,24,0.9)';
-      ctx.fill();
-    }
+    ctx.fillStyle = 'rgba(6,6,24,0.9)';
+    ctx.fill();
 
     ctx.strokeStyle = color;
     ctx.shadowColor = color;
@@ -1541,7 +1724,18 @@
     ctx.lineWidth = 4;
     ctx.stroke();
 
-    if (!hasIcon){
+    if (hasIcon){
+      // rotated per-side so the emoji faces whoever is standing at that
+      // edge of the flat-lying iPad (see rotation values passed by render()).
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      ctx.rotate(rotation);
+      ctx.font = Math.round(m.r*1.35) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(iconEmoji, 0, Math.round(m.r*0.06));
+      ctx.restore();
+    } else {
       ctx.beginPath();
       ctx.arc(m.x, m.y, m.r*0.4, 0, Math.PI*2);
       ctx.strokeStyle = color;
@@ -1660,8 +1854,8 @@
     // rotated to face them — left rotates 90° clockwise, right rotates 90°
     // counter-clockwise. (On phones this composes with the 90° scene
     // rotation above and still works out correctly for each side.)
-    drawMallet(mallet.left, '#00f6ff', getIconImg(settings.iconLeft), Math.PI/2);
-    drawMallet(mallet.right, '#ff2bd6', getIconImg(settings.iconRight), -Math.PI/2);
+    drawMallet(mallet.left, '#00f6ff', getIconEmoji(settings.iconLeft), Math.PI/2);
+    drawMallet(mallet.right, '#ff2bd6', getIconEmoji(settings.iconRight), -Math.PI/2);
     drawPuck();
 
     ctx.restore();
@@ -1769,7 +1963,9 @@
   selectGroup('.malletR-btn', 'mallet', null, function(v){ settings.malletSizeRight = v; });
   selectGroup('.freq-btn', 'freq', null, function(v){ settings.itemFrequency = v; });
   selectGroup('.target-btn', 'target', null, function(v){ settings.target = parseInt(v,10); });
-  selectGroup('.sound-btn', 'sound', null, function(v){ settings.sound = (v==='on'); });
+  // sound is always on now — the settings UI toggle was removed to keep the
+  // (phone) settings screen short enough that the start button never needs
+  // scrolling to reach; settings.sound defaults to true above.
 
   /* ---------------------------------------------------------
      FULLSCREEN
@@ -1802,11 +1998,7 @@
   function updateIconPickThumb(side){
     var key = side === 'left' ? settings.iconLeft : settings.iconRight;
     var thumbEl = document.getElementById(side === 'left' ? 'iconPickThumbL' : 'iconPickThumbR');
-    if (key && key !== 'none' && ICON_SRC[key]){
-      thumbEl.innerHTML = '<img src="'+ICON_SRC[key]+'" alt="">';
-    } else {
-      thumbEl.textContent = '✕';
-    }
+    thumbEl.textContent = getIconEmoji(key) || '✕';
   }
 
   function openIconPicker(side){
